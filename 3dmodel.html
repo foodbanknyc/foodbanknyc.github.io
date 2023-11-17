@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Model</title>
+    <style>
+        /* Setting the body and html to full height */
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            background-color: lightgray;
+        }
+
+        /* Making the container div a flex container and centering its children */
+        #powerbi-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+        }
+
+        /* Setting the iframe to occupy the full viewport width and height */
+        #powerbi-report {
+            width: 100vw;
+            height: 100vh;
+            border: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="powerbi-container">
+        <iframe id="powerbi-report"
+            title="FY23 Map of Services"
+            src="https://sketchfab.com/models/1ca03e952be241aa9458d4d69790b363/embed"
+            allowFullScreen="true">
+        </iframe>
+    </div>
+</body>
+
+</html>

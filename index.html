@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FBNYC Data</title>
+    <link rel="icon" href="lightning.png" type="image/x-icon">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<style>
+    .orange-bar {
+        background-color: rgb(219, 139, 0);
+        height: 5px;
+        /* Adjust height as per your requirement */
+        width: 100%;
+        /* Makes sure the bar spans the entire width of the viewport */
+        position: fixed;
+        /* Keeps the bar at the top even when you scroll */
+        top: 0;
+        /* Position it at the top of the page */
+        left: 0;
+        /* Start from the leftmost part of the page */
+        z-index: 1000;
+        /* Ensure it stays above other content */
+    }
+
+    #header1 {
+        font-family: Arial, sans-serif;
+        margin-left: 28px;
+        padding-top: 18px;
+        font-size: 32px;
+        font-style: italic;
+        font-weight: bold;
+        color: rgb(219, 139, 0);
+    }
+
+    #header2 {
+        font-family: Arial, sans-serif;
+        padding: 0;
+        margin-top: -14px;
+        margin-left: 67px;
+        margin-bottom: 10px;
+        font-size: 28px;
+        font-style: italic;
+        font-weight: bolder;
+        color: rgb(219, 139, 0);
+    }
+
+
+    .container {
+        display: flex;
+    }
+
+    .work-list {
+        flex: 1;
+        padding: 20px;
+        overflow-y: auto;
+        /* Scrollable if content exceeds viewport height */
+        font-family: Helvetica, sans-serif;
+
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 40px;
+
+    }
+
+    table,
+    th,
+    td {
+        border: 1px solid black;
+    }
+
+    th,
+    td {
+        padding: 5px;
+        text-align: left;
+    }
+
+    /* Style for the table row on hover */
+    table tbody tr:hover {
+        background-color: #f5f5f5;
+        /* Light gray background on hover */
+        color: black;
+        /* Text color on hover */
+
+    }
+
+    .project-gallery {
+        flex: 1;
+        padding: 20px;
+        overflow-y: auto;
+        /* Vertical scrolling */
+    }
+
+    .project-gallery img {
+        width: 100%;
+    }
+
+    .project-gallery img:hover {
+        transform: scale(1.005);
+    }
+</style>
+
+<body>
+    <div class="orange-bar"></div>
+    <div id="header1">FBNYC</div>
+    <div id="header2">Data</div>
+    <div class="container">
+        <div class="work-list">
+            <!-- Work List items go here -->
+            <table>
+                <colgroup>
+                    <col style="width: 45%;">
+                    <col style="width: 20%;">
+                    <col style="width: 20%;">
+                    <col style="width: 15%;">
+                  </colgroup>
+                <thead>
+                    <tr>
+                        <th>Research</th>
+                        <th>Type</th>
+                        <th>Data Source</th>
+                        <th>Issued</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Example row -->
+                    <tr>
+                        <td><a href="https://fbnyc.wpenginepowered.com/wp-content/uploads/2023/05/The-Next-Hunger-Cliff_web_f.pdf">The Next Hunger Cliff</a></td>
+                        <td>PDF Report</td>
+                        <td>FBNYC</td>
+                        <td>May 2023</td>
+                    </tr>
+                    <tr>
+                        <td><a href="foodbanknyc.github.io/borofastfacts.pdf">Borough Fast Facts</a></td>
+                        <td>PDF Report</td>
+                        <td>FBNYC</td>
+                        <td>Aug 2023</td>
+                    </tr>
+                    <tr>
+                        <td><a href="foodbanknyc.github.io/cityfastfacts.pdf">Citywide Fast Facts</a></td>
+                        <td>PDF Report</td>
+                        <td>FBNYC</td>
+                        <td>Aug 2023</td>
+                    </tr>
+                    <tr>
+                        <td><a href="foodbanknyc.github.io/collegefood.pdf">Food Insecurity Among College Students</a></td>
+                        <td>PDF Report</td>
+                        <td>FBNYC</td>
+                        <td>Sep 2023</td>
+                    </tr>
+                    <tr>
+                        <td><a href="https://www.foodbanknyc.org/research-reports/">Prior Research Reports</a></td>
+                        <td>Website</td>
+                        <td>FBNYC</td>
+                        <td>May 2023</td>
+                    </tr>
+                    <tr>
+                        <td>FY23 Supply Gap</td>
+                        <td>Dashboard</td>
+                        <td>FBNYC</td>
+                        <td>Jan 2024</td>
+                    </tr>
+                    </tr>
+                    <!-- Add more rows as needed -->
+                </tbody>
+            </table>
+
+            <table>
+                <colgroup>
+                    <col style="width: 45%;">
+                    <col style="width: 20%;">
+                    <col style="width: 20%;">
+                    <col style="width: 15%;">
+                  </colgroup>
+                <thead>
+                    <tr>
+                        <th>Evaluation </th>
+                        <th>Type</th>
+                        <th>Data Source</th>
+                        <th>Issued</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Example row -->
+                    <tr>
+                        <td><a href="https://feedingamerica.az1.qualtrics.com/results/public/ZmVlZGluZ2FtZXJpY2EtVVJfMFZaaXhpR3plZFhCUmhZLTYyMjI2YzlhZDg5NDQyMDAxMDdkNzM1OQ==#/pages/Page_dd2ee86d-9cd1-48b7-8200-cfdb44089b0b">Client Survey</a></td>
+                        <td>Survey</td>
+                        <td>FBNYC</td>
+                        <td>Oct 2022</td>
+                    </tr>
+                    <tr>
+                        <td><a href="https://feedingamerica.az1.qualtrics.com/reports/RC/public/ZmVlZGluZ2FtZXJpY2EtNjRjNDJkOGEyNjA5ZWMwMDA5NTBjM2EzLVVSXzNFM09LOGRjOEFFNTJkdw==">Equitable Access Survey</a></td>
+                        <td>Survey</td>
+                        <td>FBNYC</td>
+                        <td>2023</td>
+                    </tr>
+                    </tr>
+                    <!-- Add more rows as needed -->
+                </tbody>
+            </table>
+
+            <table>
+                <colgroup>
+                    <col style="width: 45%;">
+                    <col style="width: 20%;">
+                    <col style="width: 20%;">
+                    <col style="width: 15%;">
+                  </colgroup>
+                <thead>
+                    <tr>
+                        <th>Analytics</th>
+                        <th>Type</th>
+                        <th>Data Source</th>
+                        <th>Issued</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Example row -->
+                    <tr>
+                        <td><a href="foodbanknyc.github.io/3dmodel.html">FBNYC Warehouse Model</a></td>
+                        <td>3D Model</td>
+                        <td>FBNYC</td>
+                        <td>Sep 2023</td>
+                    </tr>
+                    <tr>
+                        <td><a href="foodbanknyc.github.io/servicemap.html">FY23 Service Map</a></td>
+                        <td>Dashboard</td>
+                        <td>FBNYC</td>
+                        <td>Oct 2023</td>
+                    </tr>
+                    <tr>
+                        <td>Food Distribution Stats</td>
+                        <td>Dashboard</td>
+                        <td>FBNYC</td>
+                        <td>Jan 2024</td>
+                    </tr>
+                    <tr>
+                        <td>NYC Pantry Visits Reports</td>
+                        <td>Dashboard</td>
+                        <td>FBNYC</td>
+                        <td>Feb 2024</td>
+                    </tr>
+
+                    <!-- Add more rows as needed -->
+                </tbody>
+            </table>
+            <table>
+                <colgroup>
+                    <col style="width: 45%;">
+                    <col style="width: 20%;">
+                    <col style="width: 20%;">
+                    <col style="width: 15%;">
+                  </colgroup>
+                <thead>
+                    <tr>
+                        <th>External Data</th>
+                        <th>Type</th>
+                        <th>Data Source</th>
+                        <th>Issued</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Example row -->
+                    <tr>
+                        <td><a href="arnavkrishna.github.io/hrbot.html"></a></td>
+                        <td>External Website</td>
+                        <td></td>
+                        <td></td>
+                        <tr>
+                            <td><a href="arnavkrishna.github.io/hrbot.html"></a></td>
+                            <td>External Website</td>
+                            <td></td>
+                            <td></td>
+                    <tr>
+                        <td><a href="arnavkrishna.github.io/hrbot.html"></a></td>
+                        <td>External Website</td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td><a href="arnavkrishna.github.io/hrbot.html"></a></td>
+                        <td>External Website</td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td><a href="arnavkrishna.github.io/hrbot.html"></a></td>
+                        <td>External Website</td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <!-- Add more rows as needed -->
+                </tbody>
+            </table>
+        </div>
+        <div class="project-gallery">
+            <!-- Images for the gallery go here -->
+            <a href="foodbanknyc.github.io/servicemap.html">
+                <img src="heatmap_highres.png" alt="Project 2">
+                </a>
+            <a href="foodbanknyc.github.io/3dmodel.html">
+                <img src="3dmodel.png" alt="Project 1">
+                </a>
+
+        </a>
+            <!-- Add more images as needed -->
+        </div>
+    </div>
+</body>
+</html>

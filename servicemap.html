@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FY23 Service Map</title>
+    <style>
+        /* Setting the body and html to full height */
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            background-color: lightgray;
+        }
+
+        /* Making the container div a flex container and centering its children */
+        #powerbi-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+        }
+
+        /* Setting the iframe to occupy the full viewport width and height */
+        #powerbi-report {
+            width: 100vw;
+            height: 100vh;
+            border: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="powerbi-container">
+        <iframe id="powerbi-report"
+            title="FY23 Map of Services"
+            src="https://app.powerbi.com/reportEmbed?reportId=4fa27a21-e75d-41d8-bac1-def9ec4af7d7&autoAuth=true&ctid=a1ae8ed8-76d2-4b65-90e6-0165d0369c80"
+            allowFullScreen="true">
+        </iframe>
+    </div>
+</body>
+
+</html>
