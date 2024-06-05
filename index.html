@@ -1,119 +1,115 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FBNYC Data</title>
     <link rel="icon" href="lightning.png" type="image/x-icon">
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-NFEQG2H7XH"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-NFEQG2H7XH');
+    </script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
 
+        .orange-bar {
+            background-color: rgb(219, 139, 0);
+            height: 5px;
+            width: 100%;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1000;
+        }
+
+        #header1 {
+            font-family: Arial, sans-serif;
+            margin-left: 28px;
+            padding-top: 18px;
+            font-size: 32px;
+            font-style: italic;
+            font-weight: bold;
+            color: rgb(219, 139, 0);
+        }
+
+        #header2 {
+            font-family: Arial, sans-serif;
+            padding: 0;
+            margin-top: -14px;
+            margin-left: 67px;
+            margin-bottom: 10px;
+            font-size: 28px;
+            font-style: italic;
+            font-weight: bolder;
+            color: rgb(219, 139, 0);
+        }
+
+        .container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .work-list {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            font-family: Helvetica, sans-serif;
+            max-width: 50%; /* Set max width to 50% */
+            box-sizing: border-box; /* Ensure padding and borders are included in the width */
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 40px;
+        }
+
+        table,
+        th,
+        td {
+            border: 1px solid black;
+        }
+
+        th,
+        td {
+            padding: 5px;
+            text-align: left;
+        }
+
+        table tbody tr:hover {
+            background-color: #f5f5f5;
+            color: black;
+        }
+
+        .project-gallery {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            max-width: 50%; /* Set max width to 50% */
+            box-sizing: border-box; /* Ensure padding and borders are included in the width */
+            padding-top: 20px; /* Adjust the padding to move the model up */
+        }
+
+        .model-container {
+            flex: 1;
+            position: relative;
+            width: 100%; /* Ensure it takes up full width */
+            height: 100%; /* Ensure it takes up full height */
+            margin-top: -20px; /* Adjust this value to move the model higher */
+        }
+    </style>
 </head>
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-NFEQG2H7XH"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-NFEQG2H7XH');
-</script>
-<style>
-    .orange-bar {
-        background-color: rgb(219, 139, 0);
-        height: 5px;
-        /* Adjust height as per your requirement */
-        width: 100%;
-        /* Makes sure the bar spans the entire width of the viewport */
-        position: fixed;
-        /* Keeps the bar at the top even when you scroll */
-        top: 0;
-        /* Position it at the top of the page */
-        left: 0;
-        /* Start from the leftmost part of the page */
-        z-index: 1000;
-        /* Ensure it stays above other content */
-    }
-
-    #header1 {
-        font-family: Arial, sans-serif;
-        margin-left: 28px;
-        padding-top: 18px;
-        font-size: 32px;
-        font-style: italic;
-        font-weight: bold;
-        color: rgb(219, 139, 0);
-    }
-
-    #header2 {
-        font-family: Arial, sans-serif;
-        padding: 0;
-        margin-top: -14px;
-        margin-left: 67px;
-        margin-bottom: 10px;
-        font-size: 28px;
-        font-style: italic;
-        font-weight: bolder;
-        color: rgb(219, 139, 0);
-    }
-
-
-    .container {
-        display: flex;
-    }
-
-    .work-list {
-        flex: 1;
-        padding: 20px;
-        overflow-y: auto;
-        /* Scrollable if content exceeds viewport height */
-        font-family: Helvetica, sans-serif;
-
-    }
-
-    table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 40px;
-
-    }
-
-    table,
-    th,
-    td {
-        border: 1px solid black;
-    }
-
-    th,
-    td {
-        padding: 5px;
-        text-align: left;
-    }
-
-    /* Style for the table row on hover */
-    table tbody tr:hover {
-        background-color: #f5f5f5;
-        /* Light gray background on hover */
-        color: black;
-        /* Text color on hover */
-
-    }
-
-    .project-gallery {
-        flex: 1;
-        padding: 20px;
-        overflow-y: auto;
-        /* Vertical scrolling */
-    }
-
-    .project-gallery img {
-        width: 100%;
-    }
-
-    .project-gallery img:hover {
-        transform: scale(1.005);
-    }
-</style>
-
 <body>
     <div class="orange-bar"></div>
     <div id="header1">FBNYC</div>
@@ -127,7 +123,7 @@
                     <col style="width: 20%;">
                     <col style="width: 20%;">
                     <col style="width: 15%;">
-                  </colgroup>
+                </colgroup>
                 <thead>
                     <tr>
                         <th>Research</th>
@@ -174,8 +170,6 @@
                         <td>FBNYC</td>
                         <td>May 2023</td>
                     </tr>
-                    </tr>
-                    <!-- Add more rows as needed -->
                 </tbody>
             </table>
 
@@ -185,7 +179,7 @@
                     <col style="width: 20%;">
                     <col style="width: 20%;">
                     <col style="width: 15%;">
-                  </colgroup>
+                </colgroup>
                 <thead>
                     <tr>
                         <th>Evaluation </th>
@@ -202,8 +196,6 @@
                         <td>FBNYC</td>
                         <td>Oct 2022</td>
                     </tr>
-                    </tr>
-                    <!-- Add more rows as needed -->
                 </tbody>
             </table>
 
@@ -213,7 +205,7 @@
                     <col style="width: 20%;">
                     <col style="width: 20%;">
                     <col style="width: 15%;">
-                  </colgroup>
+                </colgroup>
                 <thead>
                     <tr>
                         <th>Analytics</th>
@@ -248,18 +240,16 @@
                         <td>FBNYC</td>
                         <td>Oct 2023</td>
                     </tr>
-
-
-                    <!-- Add more rows as needed -->
                 </tbody>
             </table>
+
             <table>
                 <colgroup>
                     <col style="width: 45%;">
                     <col style="width: 20%;">
                     <col style="width: 20%;">
                     <col style="width: 15%;">
-                  </colgroup>
+                </colgroup>
                 <thead>
                     <tr>
                         <th>External Data</th>
@@ -285,19 +275,107 @@
                             <td>External Site</td>
                             <td>No Kid Hungry</td>
                             <td>Apr 2024</td>
-                    <!-- Add more rows as needed -->
                 </tbody>
             </table>
             <div>Can't find what you're looking for? Submit a request <a href="https://forms.office.com/pages/responsepage.aspx?id=2I6uodJ2ZUuQ5gFl0DacgPSbf10EUcpAv91xckH2Ah5UQjBIMUNLVkVYR09DTkY4OEM5RjVHNEpCSC4u">here</a>.</div>
         </div>
         <div class="project-gallery">
-            <!-- Images for the gallery go here -->
-            <a href="https://foodbanknyc.github.io/servicemap">
-                <img src="heatmap_highres.png" alt="Project 2">
-                </a>
-        </a>
-            <!-- Add more images as needed -->
+            <!-- Embed the 3D model viewer -->
+            <div class="model-container" id="model-container"></div>
         </div>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/three@0.125.2/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.125.2/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.125.2/examples/js/loaders/GLTFLoader.js"></script>
+    <script>
+        // Basic Three.js setup
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000); // Adjust aspect ratio later
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        const modelContainer = document.getElementById('model-container');
+        renderer.setSize(modelContainer.clientWidth, modelContainer.clientHeight);
+        renderer.setClearColor(0xffffff, 1); // Set background to white
+        modelContainer.appendChild(renderer.domElement);
+
+        // Add some lights
+        const ambientLight = new THREE.AmbientLight(0x404040, .75); // soft white light
+        scene.add(ambientLight);
+
+        const directionalLight1 = new THREE.DirectionalLight(0xffffff, 1);
+        directionalLight1.position.set(5, 10, 7.5);
+        directionalLight1.castShadow = true;
+        scene.add(directionalLight1);
+
+        const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.2);
+        directionalLight2.position.set(-5, -10, -7.5);
+        directionalLight2.castShadow = true;
+        scene.add(directionalLight2);
+
+        const pointLight = new THREE.PointLight(0xffffff, 0.2);
+        pointLight.position.set(0, 10, 0);
+        scene.add(pointLight);
+
+        // Enable shadows
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+        let model;
+
+        // Load the GLTF model
+        const loader = new THREE.GLTFLoader();
+        loader.load('3dmodel.gltf', function (gltf) {
+            model = gltf.scene;
+            model.position.y += 1; // Adjust this value to raise the model
+            scene.add(model);
+
+            // Set the initial camera position and target for diagonal view
+            const box = new THREE.Box3().setFromObject(model);
+            const center = box.getCenter(new THREE.Vector3());
+            const size = box.getSize(new THREE.Vector3());
+
+            // Manually set the camera position for a diagonal view
+            const defaultCameraPosition = {
+                x: center.x + size.x * -1, // Adjust this value to position diagonally
+                y: center.y + size.y * 5, // Adjust this value to position diagonally
+                z: center.z + size.z * 0  // Adjust this value to position diagonally
+            };
+            camera.position.set(defaultCameraPosition.x, defaultCameraPosition.y, defaultCameraPosition.z);
+            camera.lookAt(center);
+
+            // Update controls target
+            controls.target.copy(center);
+            controls.update();
+
+            animate();
+        }, undefined, function (error) {
+            console.error(error);
+        });
+
+        // Add OrbitControls
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+        // Handle window resizing
+        window.addEventListener('resize', function () {
+            const width = modelContainer.clientWidth;
+            const height = modelContainer.clientHeight;
+            renderer.setSize(width, height);
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+        });
+
+        // Initial adjustment of aspect ratio
+        const initialWidth = modelContainer.clientWidth;
+        const initialHeight = modelContainer.clientHeight;
+        camera.aspect = initialWidth / initialHeight;
+        camera.updateProjectionMatrix();
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update(); // only required if controls.enableDamping = true, or if controls.autoRotate = true
+            renderer.render(scene, camera);
+        }
+    </script>
 </body>
 </html>
