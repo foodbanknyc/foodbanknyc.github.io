@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>three.js - pointerlock controls with GLTF</title>
+    <title>FBNYC Warehouse</title>
+    <link rel="icon" href="lightning.png" type="image/x-icon">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
     <style>
@@ -208,8 +209,8 @@
                 direction.x = Number(moveRight) - Number(moveLeft);
                 direction.normalize(); // this ensures consistent movements in all directions
 
-                if (moveForward || moveBackward) velocity.z -= direction.z * 400.0 * delta;
-                if (moveLeft || moveRight) velocity.x -= direction.x * 400.0 * delta;
+                if (moveForward || moveBackward) velocity.z -= direction.z * 600.0 * delta;
+                if (moveLeft || moveRight) velocity.x -= direction.x * 600.0 * delta;
 
                 controls.moveRight(-velocity.x * delta);
                 controls.moveForward(-velocity.z * delta);
