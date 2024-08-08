@@ -25,6 +25,20 @@
             cursor: pointer;
         }
 
+        #loading {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            font-size: 24px;
+            z-index: 100;
+        }
+
         #coordinates {
             position: absolute;
             top: 10px;
@@ -50,6 +64,7 @@
             </p>
         </div>
     </div>
+    <div id="loading">Loading...</div>
     <div id="coordinates"></div>
 
     <script type="importmap">
@@ -83,6 +98,7 @@
         const direction = new THREE.Vector3();
 
         const coordinatesDiv = document.getElementById('coordinates');
+        const loadingDiv = document.getElementById('loading');
 
         init();
 
@@ -93,9 +109,18 @@
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0xd3d3d3); // Light gray background
 
-            const light = new THREE.HemisphereLight(0x888888, 0x444444, 1.75); // Dim and diffuse light
+            const light = new THREE.HemisphereLight(0x888888, 0x444444, 1.55); // Dim and diffuse light
             light.position.set(0.5, 1, 0.75);
             scene.add(light);
+
+            // Additional light sources (initially off)
+            const spotlight1 = new THREE.SpotLight(0xffffff, 0.5);
+            spotlight1.position.set(20, 40, 20);
+            scene.add(spotlight1);
+
+            const spotlight2 = new THREE.SpotLight(0xffffff, 0.05);
+            spotlight2.position.set(-50, 40, -50);
+            scene.add(spotlight2);
 
             controls = new PointerLockControls(camera, document.body);
 
@@ -176,6 +201,9 @@
                 model.scale.set(10, 10, 10); // Scale up the model
                 scene.add(model);
                 objects.push(model); // Add the model to the objects array for collision detection
+
+                // Hide loading screen
+                loadingDiv.style.display = 'none';
             }, undefined, function (error) {
                 console.error(error);
             });
