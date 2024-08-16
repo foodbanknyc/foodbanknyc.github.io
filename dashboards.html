@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FBNYC Data</title>
+    <link rel="icon" href="lightning.png" type="image/x-icon">
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-NFEQG2H7XH"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-NFEQG2H7XH');
+    </script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .orange-bar {
+            background-color: rgb(219, 139, 0);
+            height: 5px;
+            width: 100%;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1000;
+        }
+
+        #header1 {
+            font-family: Arial, sans-serif;
+            margin-left: 28px;
+            padding-top: 18px;
+            font-size: 32px;
+            font-style: italic;
+            font-weight: bold;
+            color: rgb(219, 139, 0);
+        }
+
+        #header2 {
+            font-family: Arial, sans-serif;
+            padding: 0;
+            margin-top: -14px;
+            margin-left: 67px;
+            margin-bottom: 10px;
+            font-size: 28px;
+            font-style: italic;
+            font-weight: bolder;
+            color: rgb(219, 139, 0);
+        }
+
+        .container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .work-list {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            font-family: Helvetica, sans-serif;
+            max-width: 50%; /* Set max width to 50% */
+            box-sizing: border-box; /* Ensure padding and borders are included in the width */
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 40px;
+        }
+
+        table,
+        th,
+        td {
+            border: 1px solid black;
+        }
+
+        th,
+        td {
+            padding: 5px;
+            text-align: left;
+        }
+
+        table tbody tr:hover {
+            background-color: #f5f5f5;
+            color: black;
+        }
+
+        .project-gallery {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            max-width: 50%; /* Set max width to 50% */
+            box-sizing: border-box; /* Ensure padding and borders are included in the width */
+            padding-top: 20px; /* Adjust the padding to move the model up */
+        }
+
+        .model-container {
+            flex: 1;
+            position: relative;
+            width: 100%; /* Ensure it takes up full width */
+            height: 100%; /* Ensure it takes up full height */
+            margin-top: -20px; /* Adjust this value to move the model higher */
+        }
+        /* Tooltip container */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+
+        /* Tooltip text */
+        .tooltip .tooltip-image {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(10%);
+            width: 450px;
+            border: 1.4px solid #071414;
+            background-color: #fff;
+            padding: 0px;
+            z-index: 10;
+        }
+
+        /* Show the tooltip text when you hover over the tooltip container */
+        .tooltip:hover .tooltip-image {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="orange-bar"></div>
+    <div id="header1">FBNYC</div>
+    <div id="header2">Data</div>
+    <div class="container">
+        <div class="work-list">
+            <!-- Work List items go here -->
+            <table>
+                <colgroup>
+                    <col style="width: 45%;">
+                    <col style="width: 25%;">
+                    <col style="width: 30%;">
+
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th>Food Program Dashboards</th>
+                        <th>Refresh Rate</th>
+                        <th>Primary Data Source</th>
+
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><div class="tooltip"><a href="https://app.powerbi.com/Redirect?action=OpenReport&appId=c725ff95-d2cc-4968-b5a0-2a1b33b83ee8&reportObjectId=9dc38204-8db3-4dce-b706-ca596d36d456&ctid=a1ae8ed8-76d2-4b65-90e6-0165d0369c80&reportPage=ReportSectiona2dc4191ce3528628c5d&pbi_source=appShareLink&portalSessionId=6dac5145-8f20-43df-bead-10d3fa0c7b6e" target="_blank">Inbound Receipts</a>
+                            <img src="images/inbound.png" alt="Inbound Receipts" class="tooltip-image"></div>
+                        <td>Hourly</td>
+                        <td>NS</td>
+                    </tr>
+                    <tr>
+                        <td><div class="tooltip"><a href="https://app.powerbi.com/Redirect?action=OpenReport&appId=bd016c84-a917-44cd-9857-ca04c96c5e2c&reportObjectId=efecd242-ebaa-4ac7-941b-7f1334a9a8be&ctid=a1ae8ed8-76d2-4b65-90e6-0165d0369c80&reportPage=ReportSectionb37da1222c158386444e&pbi_source=appShareLink&portalSessionId=6dac5145-8f20-43df-bead-10d3fa0c7b6e" target="_blank">Inventory</a>
+                            <img src="images/inventory.png" alt="Inventory" class="tooltip-image"></div>
+                        <td>Hourly</td>
+                        <td>NS</td>
+                    </tr>
+                    <tr>
+                        <td><div class="tooltip"><a href="https://app.powerbi.com/links/5bL1GFDAMR?ctid=a1ae8ed8-76d2-4b65-90e6-0165d0369c80&pbi_source=linkShare" target="_blank">Food Distribution</a>
+                            <img src="images/fooddist.png" alt="Distribution" class="tooltip-image"></div>
+                        <td>Hourly</td>
+                        <td>NS</td>
+
+                    </tr>
+                    <tr>
+                        <td><div class="tooltip"><a href="https://app.powerbi.com/Redirect?action=OpenReport&appId=26813bd6-e255-40da-9669-ae7b4c228a91&reportObjectId=cc944cf9-e064-4f6e-9725-d5aba917822a&ctid=a1ae8ed8-76d2-4b65-90e6-0165d0369c80&reportPage=ReportSection65caaf090d0d78e422a2&pbi_source=appShareLink&portalSessionId=6dac5145-8f20-43df-bead-10d3fa0c7b6e" target="_blank">Mobile Pantry</a>
+                            <img src="images/mobile.png" alt="Mobile" class="tooltip-image"></div>
+                        <td>Hourly</td>
+                        <td>NS</td>
+                    </tr>
+                    <tr>
+                        <td><div class="tooltip"><a href="https://app.powerbi.com/links/Wr2dxTSU42?ctid=a1ae8ed8-76d2-4b65-90e6-0165d0369c80&pbi_source=linkShare" target="_blank">Cost to Distribute</a>
+                            <img src="images/costdist.png" alt="Cost" class="tooltip-image"></div>
+                        <td>Hourly</td>
+                        <td>NS</td>
+                    </tr>
+
+                </tbody>
+            </table>
+
+            <table>
+                <colgroup>
+                    <col style="width: 45%;">
+                    <col style="width: 25%;">
+                    <col style="width: 30%;">
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th>Warehouse Operations</th>
+                        <th>Refresh Rate</th>
+                        <th>Primary Data Source</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><div class="tooltip"><a href="https://app.powerbi.com/links/qAQgZ5YHTZ?ctid=a1ae8ed8-76d2-4b65-90e6-0165d0369c80&pbi_source=linkShare&bookmarkGuid=90ffefae-7fe8-431d-8123-96802faccd42" target="_blank">Warehouse Operations</a>
+                            <img src="images/whse.png" alt="Warehouse" class="tooltip-image"></div>
+                        <td>Hourly</td>
+                        <td>AGI</td>
+                    </tr>
+                <tr>
+                        <td><div class="tooltip"><a href="https://app.powerbi.com/links/eib_vQbK18?ctid=a1ae8ed8-76d2-4b65-90e6-0165d0369c80&pbi_source=linkShare&bookmarkGuid=d236a999-a5ac-476d-885b-30de752bb531" target="_blank">Selection & QC</a>
+                        <img src="images/selection.png" alt="Selection & QC" class="tooltip-image"></div>
+                        <td>Hourly</td>
+                        <td>AGI</td>
+                </tr>
+                </tbody>
+            </table>
+
+            <table>
+                <colgroup>
+                    <col style="width: 45%;">
+                    <col style="width: 25%;">
+                    <col style="width: 30%;">
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th>Analytics</th>
+                        <th>Refresh Rate</th>
+                        <th>Primary Data Source</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Example row -->
+                    <tr>
+                        <td><div class="tooltip"><a href="https://app.powerbi.com/links/QVBuE8GG5F?ctid=a1ae8ed8-76d2-4b65-90e6-0165d0369c80&pbi_source=linkShare" target="_blank">Citywide Site Visits</a>
+                        <img src="images/sitevisits.png" alt="Site Visits" class="tooltip-image"></div>
+                        <td>Live</td>
+                        <td>FeedNYC</td>
+                    </tr>
+                    <tr>
+                        <td><div class="tooltip"><a href="https://app.powerbi.com/links/y1YMjxIkUB?ctid=a1ae8ed8-76d2-4b65-90e6-0165d0369c80&pbi_source=linkShare" target="_blank">Agency Days & Hours of Op.</a>
+                        <img src="images/hours.png" alt="Agency Hours" class="tooltip-image"></div>
+                        <td>Weekly</td>
+                        <td>NS</td>
+                    </tr>
+                    <tr>
+                        <td><div class="tooltip"><a href="https://app.powerbi.com/links/T1rLh9zHN1?ctid=a1ae8ed8-76d2-4b65-90e6-0165d0369c80&pbi_source=linkShare" target="_blank">Public Affairs</a>
+                            <img src="images/publicaffairs.png" alt="Public Affairs" class="tooltip-image"></div>
+                        <td>Weekly</td>
+                        <td>NS</td>
+                    </tr>
+                    <tr>
+                        <td><div class="tooltip"><a href="https://foodbanknyc.github.io/servicemap" target="_blank">FY23 Service Map</a>
+                            <img src="images/service.png" alt="Service" class="tooltip-image"></div>
+                        <td>Static</td>
+                        <td>NS</td>
+                    </tr>
+                    <tr>
+                        <td><a href="https://app.powerbi.com/Redirect?action=OpenReport&appId=05072cab-9a8a-4717-aafc-a0e7e16bfcc6&reportObjectId=820fcac1-cf3a-4832-a6f1-20a27b2ba715&ctid=a1ae8ed8-76d2-4b65-90e6-0165d0369c80&reportPage=ReportSection&pbi_source=appShareLink&portalSessionId=6dac5145-8f20-43df-bead-10d3fa0c7b6e" target="_blank">Agency Grant Usage</a></td>
+                        <td>Hourly</td>
+                        <td>NS</td>
+                    </tr>
+
+                </tbody>
+            </table>
+
+
+            <div>Can't find what you're looking for? Submit a data request <a href="https://forms.office.com/pages/responsepage.aspx?id=2I6uodJ2ZUuQ5gFl0DacgPSbf10EUcpAv91xckH2Ah5UQjBIMUNLVkVYR09DTkY4OEM5RjVHNEpCSC4u" target="_blank">here</a>.</div>
+        </div>
+        <div class="project-gallery">
+            <!-- Embed the 3D model viewer -->
+            <div class="model-container" id="model-container"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/three@0.125.2/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.125.2/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.125.2/examples/js/loaders/GLTFLoader.js"></script>
+    <script>
+        // Basic Three.js setup
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000); // Adjust aspect ratio later
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        const modelContainer = document.getElementById('model-container');
+        renderer.setSize(modelContainer.clientWidth, modelContainer.clientHeight);
+        renderer.setClearColor(0xffffff, 1); // Set background to white
+        modelContainer.appendChild(renderer.domElement);
+
+        // Add some lights
+        const ambientLight = new THREE.AmbientLight(0x404040, .75); // soft white light
+        scene.add(ambientLight);
+
+        const directionalLight1 = new THREE.DirectionalLight(0xffffff, 1);
+        directionalLight1.position.set(5, 10, 7.5);
+        directionalLight1.castShadow = true;
+        scene.add(directionalLight1);
+
+        const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.2);
+        directionalLight2.position.set(-5, -10, -7.5);
+        directionalLight2.castShadow = true;
+        scene.add(directionalLight2);
+
+        const pointLight = new THREE.PointLight(0xffffff, 0.2);
+        pointLight.position.set(0, 10, 0);
+        scene.add(pointLight);
+
+        // Enable shadows
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+        let model;
+
+        // Load the GLTF model
+        const loader = new THREE.GLTFLoader();
+        loader.load('3dmodel.gltf', function (gltf) {
+            model = gltf.scene;
+            model.position.y += 1; // Adjust this value to raise the model
+            scene.add(model);
+
+            // Set the initial camera position and target for diagonal view
+            const box = new THREE.Box3().setFromObject(model);
+            const center = box.getCenter(new THREE.Vector3());
+            const size = box.getSize(new THREE.Vector3());
+
+            // Manually set the camera position for a diagonal view
+            const defaultCameraPosition = {
+                x: center.x + size.x * -1, // Adjust this value to position diagonally
+                y: center.y + size.y * 5, // Adjust this value to position diagonally
+                z: center.z + size.z * 0  // Adjust this value to position diagonally
+            };
+            camera.position.set(defaultCameraPosition.x, defaultCameraPosition.y, defaultCameraPosition.z);
+            camera.lookAt(center);
+
+            // Update controls target
+            controls.target.copy(center);
+            controls.update();
+
+            animate();
+        }, undefined, function (error) {
+            console.error(error);
+        });
+
+        // Add OrbitControls
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+        // Handle window resizing
+        window.addEventListener('resize', function () {
+            const width = modelContainer.clientWidth;
+            const height = modelContainer.clientHeight;
+            renderer.setSize(width, height);
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+        });
+
+        // Initial adjustment of aspect ratio
+        const initialWidth = modelContainer.clientWidth;
+        const initialHeight = modelContainer.clientHeight;
+        camera.aspect = initialWidth / initialHeight;
+        camera.updateProjectionMatrix();
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update(); // only required if controls.enableDamping = true, or if controls.autoRotate = true
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>
