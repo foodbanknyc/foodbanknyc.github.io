@@ -31,8 +31,9 @@
                     timestamp: timestamp
                 };
 
-                fetch('https://cors-anywhere.herokuapp.com/https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec', {
+                fetch('https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec', {
                     method: 'POST',
+                    mode: 'no-cors',  // This disables CORS checks
                     body: JSON.stringify({
                         siteId: siteId,
                         visitorId: visitorId,
@@ -42,7 +43,7 @@
                         'Content-Type': 'application/json'
                     }
                 }).then(response => {
-                    console.log('Visit logged', response);
+                    console.log('Visit logged');
                 }).catch(error => {
                     console.error('Error logging visit:', error);
                 });
