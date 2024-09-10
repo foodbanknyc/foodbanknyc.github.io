@@ -31,9 +31,13 @@
                     timestamp: timestamp
                 };
 
-                fetch('https://script.google.com/macros/s/AKfycbyFrng-pa4Kh_3eKnP9itKbFZwCJCr_UOfY8lrnLYDjRvOwN3Nc2vODtFOtNWcXoE7z/exec', {
+                fetch('https://cors-anywhere.herokuapp.com/https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec', {
                     method: 'POST',
-                    body: JSON.stringify(data),
+                    body: JSON.stringify({
+                        siteId: siteId,
+                        visitorId: visitorId,
+                        timestamp: timestamp
+                    }),
                     headers: {
                         'Content-Type': 'application/json'
                     }
@@ -42,6 +46,7 @@
                 }).catch(error => {
                     console.error('Error logging visit:', error);
                 });
+                
             });
     </script>
 </body>
