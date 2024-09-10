@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visit Tracker</title>
+    <script src="https://cdn.jsdelivr.net/npm/@fingerprintjs/fingerprintjs@3/dist/fp.min.js"></script>
+</head>
+<body>
+    <h1>Thank you for visiting!</h1>
+    <p>For other services click <a href="https://www.foodbanknyc.org/get-help/" target="_blank">here</a>.</p>
+    <div> <img src="images/logo.jpg" width="200"></div>
+    <script>
+        // Initialize FingerprintJS
+        const fpPromise = FingerprintJS.load();
+
+        // Get the site ID from the URL query parameter (e.g., ?siteid=123)
+        const urlParams = new URLSearchParams(window.location.search);
+        const siteId = urlParams.get('siteid') || 'unknown';
+
+        fpPromise
+            .then(fp => fp.get())
+            .then(result => {
+                const visitorId = result.visitorId;
+                const timestamp = new Date().toISOString();
+
+                // Send the data to Google Sheets via a webhook
+                const data = {
+                    siteId: siteId,
+                    visitorId: visitorId,
+                    timestamp: timestamp
+                };
+
+                fetch('https://script.google.com/macros/s/AKfycbyFrng-pa4Kh_3eKnP9itKbFZwCJCr_UOfY8lrnLYDjRvOwN3Nc2vODtFOtNWcXoE7z/exec', {
+                    method: 'POST',
+                    body: JSON.stringify(data),
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                }).then(response => {
+                    console.log('Visit logged', response);
+                }).catch(error => {
+                    console.error('Error logging visit:', error);
+                });
+            });
+    </script>
+</body>
+</html>
