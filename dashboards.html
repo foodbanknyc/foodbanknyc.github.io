@@ -72,7 +72,7 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 40px;
+            margin-bottom: 24px;
         }
 
         table,
@@ -98,15 +98,14 @@
             flex-direction: column;
             max-width: 50%; /* Set max width to 50% */
             box-sizing: border-box; /* Ensure padding and borders are included in the width */
-            padding-top: 20px; /* Adjust the padding to move the model up */
+            padding-bottom: 50px; 
+            padding-right: 20px; 
         }
 
         .model-container {
             flex: 1;
             position: relative;
-            width: 100%; /* Ensure it takes up full width */
-            height: 100%; /* Ensure it takes up full height */
-            margin-top: -20px; /* Adjust this value to move the model higher */
+
         }
         /* Tooltip container */
         .tooltip {
@@ -268,107 +267,13 @@
 
                 </tbody>
             </table>
-
-
-            <div>Can't find what you're looking for? Submit a data request <a href="https://forms.office.com/pages/responsepage.aspx?id=2I6uodJ2ZUuQ5gFl0DacgPSbf10EUcpAv91xckH2Ah5UQjBIMUNLVkVYR09DTkY4OEM5RjVHNEpCSC4u" target="_blank">here</a>.</div>
         </div>
         <div class="project-gallery">
-            <!-- Embed the 3D model viewer -->
-            <div class="model-container" id="model-container"></div>
+            <img src="heatmap_highres.png">
+            <div class="model-container" id="observablehq-graph"></div>
+        </div>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/three@0.125.2/build/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.125.2/examples/js/controls/OrbitControls.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.125.2/examples/js/loaders/GLTFLoader.js"></script>
-    <script>
-        // Basic Three.js setup
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000); // Adjust aspect ratio later
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        const modelContainer = document.getElementById('model-container');
-        renderer.setSize(modelContainer.clientWidth, modelContainer.clientHeight);
-        renderer.setClearColor(0xffffff, 1); // Set background to white
-        modelContainer.appendChild(renderer.domElement);
-
-        // Add some lights
-        const ambientLight = new THREE.AmbientLight(0x404040, .75); // soft white light
-        scene.add(ambientLight);
-
-        const directionalLight1 = new THREE.DirectionalLight(0xffffff, 1);
-        directionalLight1.position.set(5, 10, 7.5);
-        directionalLight1.castShadow = true;
-        scene.add(directionalLight1);
-
-        const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.2);
-        directionalLight2.position.set(-5, -10, -7.5);
-        directionalLight2.castShadow = true;
-        scene.add(directionalLight2);
-
-        const pointLight = new THREE.PointLight(0xffffff, 0.2);
-        pointLight.position.set(0, 10, 0);
-        scene.add(pointLight);
-
-        // Enable shadows
-        renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-
-        let model;
-
-        // Load the GLTF model
-        const loader = new THREE.GLTFLoader();
-        loader.load('3dmodel.gltf', function (gltf) {
-            model = gltf.scene;
-            model.position.y += 1; // Adjust this value to raise the model
-            scene.add(model);
-
-            // Set the initial camera position and target for diagonal view
-            const box = new THREE.Box3().setFromObject(model);
-            const center = box.getCenter(new THREE.Vector3());
-            const size = box.getSize(new THREE.Vector3());
-
-            // Manually set the camera position for a diagonal view
-            const defaultCameraPosition = {
-                x: center.x + size.x * -1, // Adjust this value to position diagonally
-                y: center.y + size.y * 5, // Adjust this value to position diagonally
-                z: center.z + size.z * 0  // Adjust this value to position diagonally
-            };
-            camera.position.set(defaultCameraPosition.x, defaultCameraPosition.y, defaultCameraPosition.z);
-            camera.lookAt(center);
-
-            // Update controls target
-            controls.target.copy(center);
-            controls.update();
-
-            animate();
-        }, undefined, function (error) {
-            console.error(error);
-        });
-
-        // Add OrbitControls
-        const controls = new THREE.OrbitControls(camera, renderer.domElement);
-
-        // Handle window resizing
-        window.addEventListener('resize', function () {
-            const width = modelContainer.clientWidth;
-            const height = modelContainer.clientHeight;
-            renderer.setSize(width, height);
-            camera.aspect = width / height;
-            camera.updateProjectionMatrix();
-        });
-
-        // Initial adjustment of aspect ratio
-        const initialWidth = modelContainer.clientWidth;
-        const initialHeight = modelContainer.clientHeight;
-        camera.aspect = initialWidth / initialHeight;
-        camera.updateProjectionMatrix();
-
-        // Animation loop
-        function animate() {
-            requestAnimationFrame(animate);
-            controls.update(); // only required if controls.enableDamping = true, or if controls.autoRotate = true
-            renderer.render(scene, camera);
-        }
-    </script>
 </body>
 </html>
