@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,10 +9,10 @@
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-NFEQG2H7XH"></script>
     <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-NFEQG2H7XH');
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-NFEQG2H7XH');
     </script>
     <style>
         body {
@@ -65,8 +66,10 @@
             padding: 20px;
             overflow-y: auto;
             font-family: Helvetica, sans-serif;
-            max-width: 50%; /* Set max width to 50% */
-            box-sizing: border-box; /* Ensure padding and borders are included in the width */
+            max-width: 50%;
+            /* Set max width to 50% */
+            box-sizing: border-box;
+            /* Ensure padding and borders are included in the width */
         }
 
         table {
@@ -96,44 +99,52 @@
             flex: 1;
             display: flex;
             flex-direction: column;
-            max-width: 50%; /* Set max width to 50% */
-            box-sizing: border-box; /* Ensure padding and borders are included in the width */
-            padding-top: 20px; /* Adjust the padding to move the model up */
+            max-width: 50%;
+            /* Set max width to 50% */
+            box-sizing: border-box;
+            /* Ensure padding and borders are included in the width */
+            padding-top: 20px;
+            /* Adjust the padding to move the model up */
         }
 
         .model-container {
             flex: 1;
             position: relative;
-            width: 100%; /* Ensure it takes up full width */
-            height: 100%; /* Ensure it takes up full height */
-            margin-top: -20px; /* Adjust this value to move the model higher */
+            width: 100%;
+            /* Ensure it takes up full width */
+            height: 100%;
+            /* Ensure it takes up full height */
+            margin-top: -20px;
+            /* Adjust this value to move the model higher */
         }
-                /* Tooltip container */
-                .tooltip {
-                    position: relative;
-                    display: inline-block;
-                }
-        
-                /* Tooltip text */
-                .tooltip .tooltip-image {
-                    display: none;
-                    position: absolute;
-                    top: 100%;
-                    left: 10%;
-                    transform: translateX(10%);
-                    width: 520px;
-                    border: 1.4px solid #071414;
-                    background-color: #fff;
-                    padding: 0px;
-                    z-index: 10;
-                }
-        
-                /* Show the tooltip text when you hover over the tooltip container */
-                .tooltip:hover .tooltip-image {
-                    display: block;
-                }
+
+        /* Tooltip container */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+
+        /* Tooltip text */
+        .tooltip .tooltip-image {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 10%;
+            transform: translateX(10%);
+            width: 520px;
+            border: 1.4px solid #071414;
+            background-color: #fff;
+            padding: 0px;
+            z-index: 10;
+        }
+
+        /* Show the tooltip text when you hover over the tooltip container */
+        .tooltip:hover .tooltip-image {
+            display: block;
+        }
     </style>
 </head>
+
 <body>
     <div class="orange-bar"></div>
     <div id="header1">FBNYC</div>
@@ -141,6 +152,9 @@
     <div class="container">
         <div class="work-list">
             <!-- Work List items go here -->
+
+
+
             <table>
                 <colgroup>
                     <col style="width: 45%;">
@@ -157,60 +171,98 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <!-- Example row -->
-                    <tr>
-                        <td><div class="tooltip"><a href="https://foodbanknyc.github.io/citywidefastfacts.pdf" target="_blank">Citywide Hunger Fast Facts</a>
-                            <img src="images/citywide.jpg" alt="citywidefastfacts" class="tooltip-image"></div>
-                            <td>PDF Report</td>
-                            <td>FBNYC</td>
-                            <td>Sep 2024</td>
+                    <tr onclick="window.open('https://foodbanknyc.github.io/citywidefastfacts.pdf#page=1', '_blank');"
+                        style="cursor: pointer;">
+                        <td>
+                            <div class="tooltip">
+                                <a href="https://foodbanknyc.github.io/citywidefastfacts.pdf#page=1" target="_blank"
+                                    onclick="event.stopPropagation();">Citywide Hunger Fast Facts</a>
+                                <img src="images/citywide.jpg" alt="citywidefastfacts" class="tooltip-image">
+                            </div>
+                        </td>
+                        <td>PDF Report</td>
+                        <td>FBNYC</td>
+                        <td>Sep 2024</td>
                     </tr>
-                    <tr>
-                        <td><div class="tooltip"><a href="https://foodbanknyc.github.io/hispanic.pdf" target="_blank">Hispanic/Latino Fast Facts</a>
-                            <img src="images/hispanic2.jpg" alt="hispanicfastfacts" class="tooltip-image"></div>
-                            <td>PDF Report</td>
-                            <td>FBNYC</td>
-                            <td>Sep 2024</td>
+                    <tr onclick="window.open('https://foodbanknyc.github.io/hispanic.pdf#page=1', '_blank');"
+                        style="cursor: pointer;">
+                        <td>
+                            <div class="tooltip">
+                                <a href="https://foodbanknyc.github.io/hispanic.pdf#page=1" target="_blank"
+                                    onclick="event.stopPropagation();">Hispanic/Latino Fast Facts</a>
+                                <img src="images/hispanic2.jpg" alt="hispanicfastfacts" class="tooltip-image">
+                            </div>
+                        </td>
+                        <td>PDF Report</td>
+                        <td>FBNYC</td>
+                        <td>Sep 2024</td>
                     </tr>
-                    <tr>
-                        <td><div class="tooltip"><a href="https://foodbanknyc.github.io/borofastfacts.pdf" target="_blank">Borough Fast Facts</a>
-                            <img src="images/boro.jpg" alt="borofastfacts" class="tooltip-image"></div>
-                            <td>PDF Report</td>
-                            <td>FBNYC</td>
-                            <td>Sep 2024</td>
+                    <tr onclick="window.open('https://foodbanknyc.github.io/borofastfacts.pdf#page=1', '_blank');"
+                        style="cursor: pointer;">
+                        <td>
+                            <div class="tooltip">
+                                <a href="https://foodbanknyc.github.io/borofastfacts.pdf#page=1" target="_blank"
+                                    onclick="event.stopPropagation();">Borough Fast Facts</a>
+                                <img src="images/boro.jpg" alt="borofastfacts" class="tooltip-image">
+                            </div>
+                        </td>
+                        <td>PDF Report</td>
+                        <td>FBNYC</td>
+                        <td>Sep 2024</td>
                     </tr>
-                    <tr>
-                        <td><a href="https://foodbanknyc.github.io/LGBTQfastfacts.pdf" target="_blank">LGBTQIA+ Fast Facts</a></td>
+                    <tr onclick="window.open('https://foodbanknyc.github.io/LGBTQfastfacts.pdf#page=1', '_blank');"
+                        style="cursor: pointer;">
+                        <td>
+                            <a href="https://foodbanknyc.github.io/LGBTQfastfacts.pdf#page=1" target="_blank"
+                                onclick="event.stopPropagation();">LGBTQIA+ Fast Facts</a>
+                        </td>
                         <td>PDF Report</td>
                         <td>FBNYC</td>
                         <td>Jun 2024</td>
                     </tr>
-                    <tr>
-                        <td><a href="https://foodbanknyc.github.io/womenfastfacts.pdf" target="_blank">Hunger and Poverty Among Women</a></td>
+                    <tr onclick="window.open('https://foodbanknyc.github.io/womenfastfacts.pdf#page=1', '_blank');"
+                        style="cursor: pointer;">
+                        <td>
+                            <a href="https://foodbanknyc.github.io/womenfastfacts.pdf#page=1" target="_blank"
+                                onclick="event.stopPropagation();">Hunger and Poverty Among Women</a>
+                        </td>
                         <td>PDF Report</td>
                         <td>FBNYC</td>
                         <td>Jan 2024</td>
                     </tr>
-                    <tr>
-                        <td><a href="https://foodbanknyc.github.io/collegefood.pdf" target="_blank">Food Insecurity Among College Students</a></td>
+                    <tr onclick="window.open('https://foodbanknyc.github.io/collegefood.pdf#page=1', '_blank');"
+                        style="cursor: pointer;">
+                        <td>
+                            <a href="https://foodbanknyc.github.io/collegefood.pdf#page=1" target="_blank"
+                                onclick="event.stopPropagation();">Food Insecurity Among College Students</a>
+                        </td>
                         <td>PDF Report</td>
                         <td>FBNYC</td>
                         <td>Sep 2023</td>
                     </tr>
-                    <tr>
-                        <td><a href="https://fbnyc.wpenginepowered.com/wp-content/uploads/2023/05/The-Next-Hunger-Cliff_web_f.pdf" target="_blank">The Next Hunger Cliff</a></td>
+                    <tr onclick="window.open('https://fbnyc.wpenginepowered.com/wp-content/uploads/2023/05/The-Next-Hunger-Cliff_web_f.pdf#page=1', '_blank');"
+                        style="cursor: pointer;">
+                        <td>
+                            <a href="https://fbnyc.wpenginepowered.com/wp-content/uploads/2023/05/The-Next-Hunger-Cliff_web_f.pdf#page=1"
+                                target="_blank" onclick="event.stopPropagation();">The Next Hunger Cliff</a>
+                        </td>
                         <td>PDF Report</td>
                         <td>FBNYC</td>
                         <td>May 2023</td>
                     </tr>
-                    <tr>
-                        <td><a href="https://www.foodbanknyc.org/research-reports/" target="_blank">Prior Research Reports</a></td>
+                    <tr onclick="window.open('https://www.foodbanknyc.org/research-reports/', '_blank');"
+                        style="cursor: pointer;">
+                        <td>
+                            <a href="https://www.foodbanknyc.org/research-reports/" target="_blank"
+                                onclick="event.stopPropagation();">Prior Research Reports</a>
+                        </td>
                         <td>Website</td>
                         <td>FBNYC</td>
                         <td>May 2023</td>
                     </tr>
                 </tbody>
             </table>
+
 
             <table>
                 <colgroup>
@@ -221,28 +273,37 @@
                 </colgroup>
                 <thead>
                     <tr>
-                        <th>Evaluation </th>
+                        <th>Evaluation</th>
                         <th>Type</th>
                         <th>Data Source</th>
                         <th>Issued</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <!-- Example row -->
-                    <tr>
-                        <td><a href="https://foodbanknyc.github.io/bipoc.pdf" target="_blank">BIPOC Accessibility Pilot</a></td>
+                    <tr onclick="window.open('https://foodbanknyc.github.io/bipoc.pdf#page=1', '_blank');"
+                        style="cursor: pointer;">
+                        <td>
+                            <a href="https://foodbanknyc.github.io/bipoc.pdf#page=1" target="_blank"
+                                onclick="event.stopPropagation();">BIPOC Accessibility Pilot</a>
+                        </td>
                         <td>Survey</td>
                         <td>FBNYC</td>
                         <td>Aug 2024</td>
                     </tr>
-                    <tr>
-                        <td><a href="https://feedingamerica.az1.qualtrics.com/results/public/ZmVlZGluZ2FtZXJpY2EtVVJfMFZaaXhpR3plZFhCUmhZLTYyMjI2YzlhZDg5NDQyMDAxMDdkNzM1OQ==#/pages/Page_dd2ee86d-9cd1-48b7-8200-cfdb44089b0b" target="_blank">Client Survey</a></td>
+                    <tr onclick="window.open('https://feedingamerica.az1.qualtrics.com/results/public/ZmVlZGluZ2FtZXJpY2EtVVJfMFZaaXhpR3plZFhCUmhZLTYyMjI2YzlhZDg5NDQyMDAxMDdkNzM1OQ==#/pages/Page_dd2ee86d-9cd1-48b7-8200-cfdb44089b0b', '_blank');"
+                        style="cursor: pointer;">
+                        <td>
+                            <a href="https://feedingamerica.az1.qualtrics.com/results/public/ZmVlZGluZ2FtZXJpY2EtVVJfMFZaaXhpR3plZFhCUmhZLTYyMjI2YzlhZDg5NDQyMDAxMDdkNzM1OQ==#/pages/Page_dd2ee86d-9cd1-48b7-8200-cfdb44089b0b"
+                                target="_blank" onclick="event.stopPropagation();">Client Survey</a>
+                        </td>
                         <td>Survey</td>
                         <td>FBNYC</td>
                         <td>Oct 2022</td>
                     </tr>
                 </tbody>
             </table>
+
+
 
             <table>
                 <colgroup>
@@ -260,27 +321,42 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <!-- Example row -->
-                    <tr>
-                        <td><a href="https://foodbanknyc.github.io/FY24Stats.pdf" target="_blank">FBNYC FY24 Performance</a></td>
+                    <tr onclick="window.open('https://foodbanknyc.github.io/FY24Stats.pdf#page=1', '_blank');"
+                        style="cursor: pointer;">
+                        <td>
+                            <a href="https://foodbanknyc.github.io/FY24Stats.pdf#page=1" target="_blank"
+                                onclick="event.stopPropagation();">FBNYC FY24 Performance</a>
+                        </td>
                         <td>PDF Report</td>
                         <td>FBNYC</td>
                         <td>June 2024</td>
                     </tr>
-                    <tr>
-                        <td><a href="https://foodbanknyc.github.io/foodinsecurity2019-22.pdf" target="_blank">Food Insecurity in NYC</a></td>
+                    <tr onclick="window.open('https://foodbanknyc.github.io/foodinsecurity2019-22.pdf#page=1', '_blank');"
+                        style="cursor: pointer;">
+                        <td>
+                            <a href="https://foodbanknyc.github.io/foodinsecurity2019-22.pdf#page=1" target="_blank"
+                                onclick="event.stopPropagation();">Food Insecurity in NYC</a>
+                        </td>
                         <td>PDF Report</td>
                         <td>Feeding America</td>
                         <td>May 2024</td>
                     </tr>
-                    <tr>
-                        <td><a href="https://foodbanknyc.github.io/servicemap" target="_blank">FY23 Service Map</a></td>
+                    <tr onclick="window.open('https://foodbanknyc.github.io/servicemap', '_blank');"
+                        style="cursor: pointer;">
+                        <td>
+                            <a href="https://foodbanknyc.github.io/servicemap" target="_blank"
+                                onclick="event.stopPropagation();">FY23 Service Map</a>
+                        </td>
                         <td>Dashboard</td>
                         <td>FBNYC</td>
                         <td>Oct 2023</td>
                     </tr>
-                    <tr>
-                        <td><a href="https://foodbanknyc.github.io/FY23Stats.pdf" target="_blank">FBNYC FY23 Performance</a></td>
+                    <tr onclick="window.open('https://foodbanknyc.github.io/FY23Stats.pdf#page=1', '_blank');"
+                        style="cursor: pointer;">
+                        <td>
+                            <a href="https://foodbanknyc.github.io/FY23Stats.pdf#page=1" target="_blank"
+                                onclick="event.stopPropagation();">FBNYC FY23 Performance</a>
+                        </td>
                         <td>PDF Report</td>
                         <td>FBNYC</td>
                         <td>June 2023</td>
@@ -304,35 +380,63 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <!-- Example row -->
-                    <tr>
-                        <td><a href="https://www.ers.usda.gov/topics/food-nutrition-assistance/food-security-in-the-u-s/key-statistics-graphics/" target="_blank">USDA Key Statistics & Graphics</a></td>
+                    <tr onclick="window.open('https://www.ers.usda.gov/topics/food-nutrition-assistance/food-security-in-the-u-s/key-statistics-graphics/#page=1', '_blank');"
+                        style="cursor: pointer;">
+                        <td>
+                            <a href="https://www.ers.usda.gov/topics/food-nutrition-assistance/food-security-in-the-u-s/key-statistics-graphics/#page=1"
+                                target="_blank" onclick="event.stopPropagation();">USDA Key Statistics & Graphics</a>
+                        </td>
                         <td>External Site</td>
                         <td>USDA</td>
                         <td>Sep 2024</td>
-                        <tr>
-                            <td><a href="https://state.nokidhungry.org/new-york/wp-content/uploads/sites/16/2024/04/No-Kid-Hungry-NY_Poll-Results-Spring-2024.pdf" target="_blank">NY Hunger Survey</a></td>
-                            <td>External Site</td>
-                            <td>No Kid Hungry</td>
-                            <td>Apr 2024</td>
-                    <tr>
-                        <td><a href="https://www.nyc.gov/assets/foodpolicy/downloads/pdf/nycfoodbythenumbers.pdf" target="_blank">NYC Food by the Numbers</a></td>
+                    </tr>
+                    <tr onclick="window.open('https://state.nokidhungry.org/new-york/wp-content/uploads/sites/16/2024/04/No-Kid-Hungry-NY_Poll-Results-Spring-2024.pdf#page=1', '_blank');"
+                        style="cursor: pointer;">
+                        <td>
+                            <a href="https://state.nokidhungry.org/new-york/wp-content/uploads/sites/16/2024/04/No-Kid-Hungry-NY_Poll-Results-Spring-2024.pdf#page=1"
+                                target="_blank" onclick="event.stopPropagation();">NY Hunger Survey</a>
+                        </td>
+                        <td>External Site</td>
+                        <td>No Kid Hungry</td>
+                        <td>Apr 2024</td>
+                    </tr>
+                    <tr onclick="window.open('https://www.nyc.gov/assets/foodpolicy/downloads/pdf/nycfoodbythenumbers.pdf#page=1', '_blank');"
+                        style="cursor: pointer;">
+                        <td>
+                            <a href="https://www.nyc.gov/assets/foodpolicy/downloads/pdf/nycfoodbythenumbers.pdf#page=1"
+                                target="_blank" onclick="event.stopPropagation();">NYC Food by the Numbers</a>
+                        </td>
                         <td>External Site</td>
                         <td>MOFP</td>
                         <td>Jan 2024</td>
-                    <tr>
-                            <td><a href="https://www.robinhood.org/programs/special-initiatives/poverty-tracker/" target="_blank">NYC Poverty Tracker</a></td>
-                            <td>External Site</td>
-                            <td>Robin Hood</td>
-                            <td>Dec 2023</td>
-                    <tr>
-                            <td><a href="https://unitedwaynyc.org/true-cost-of-living/" target="_blank">NYC True Cost of Living</a></td>
-                            <td>External Site</td>
-                            <td>United Way NYC</td>
-                            <td>Apr 2023</td>
+                    </tr>
+                    <tr onclick="window.open('https://www.robinhood.org/programs/special-initiatives/poverty-tracker/#page=1', '_blank');"
+                        style="cursor: pointer;">
+                        <td>
+                            <a href="https://www.robinhood.org/programs/special-initiatives/poverty-tracker/#page=1"
+                                target="_blank" onclick="event.stopPropagation();">NYC Poverty Tracker</a>
+                        </td>
+                        <td>External Site</td>
+                        <td>Robin Hood</td>
+                        <td>Dec 2023</td>
+                    </tr>
+                    <tr onclick="window.open('https://unitedwaynyc.org/true-cost-of-living/#page=1', '_blank');"
+                        style="cursor: pointer;">
+                        <td>
+                            <a href="https://unitedwaynyc.org/true-cost-of-living/#page=1" target="_blank"
+                                onclick="event.stopPropagation();">NYC True Cost of Living</a>
+                        </td>
+                        <td>External Site</td>
+                        <td>United Way NYC</td>
+                        <td>Apr 2023</td>
+                    </tr>
                 </tbody>
             </table>
-            <div>Can't find what you're looking for? Submit a request <a href="https://forms.office.com/pages/responsepage.aspx?id=2I6uodJ2ZUuQ5gFl0DacgPSbf10EUcpAv91xckH2Ah5UQjBIMUNLVkVYR09DTkY4OEM5RjVHNEpCSC4u" target="_blank">here</a>.</div>
+
+
+            <div>Can't find what you're looking for? Submit a request <a
+                    href="https://forms.office.com/pages/responsepage.aspx?id=2I6uodJ2ZUuQ5gFl0DacgPSbf10EUcpAv91xckH2Ah5UQjBIMUNLVkVYR09DTkY4OEM5RjVHNEpCSC4u"
+                    target="_blank">here</a>.</div>
         </div>
         <div class="project-gallery">
             <!-- Embed the 3D model viewer -->
@@ -433,4 +537,5 @@
         }
     </script>
 </body>
+
 </html>
