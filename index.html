@@ -21,6 +21,7 @@
             display: flex;
             flex-direction: column;
             height: 100vh;
+            font-size: 14px;
         }
 
         .orange-bar {
@@ -88,6 +89,7 @@
         td {
             padding: 5px;
             text-align: left;
+            font-size: 14px;
         }
 
         table tbody tr:hover {
@@ -171,6 +173,19 @@
                     </tr>
                 </thead>
                 <tbody>
+                    <tr onclick="window.open('https://foodbanknyc.github.io/vetsfastfacts.pdf#page=1', '_blank');"
+                    style="cursor: pointer;">
+                    <td>
+                        <div class="tooltip">
+                            <a href="https://foodbanknyc.github.io/vetsfastfacts.pdf#page=1" target="_blank"
+                                onclick="event.stopPropagation();">Veteran Hunger & Poverty Fast Facts</a>
+                            <img src="images/vets.jpg" alt="vetsfastfacts" class="tooltip-image">
+                        </div>
+                    </td>
+                    <td>PDF Report</td>
+                    <td>FBNYC</td>
+                    <td>Oct 2024</td>
+                </tr>
                     <tr onclick="window.open('https://foodbanknyc.github.io/citywidefastfacts.pdf#page=1', '_blank');"
                         style="cursor: pointer;">
                         <td>
@@ -329,7 +344,7 @@
                         </td>
                         <td>PDF Report</td>
                         <td>FBNYC</td>
-                        <td>October 2024</td>
+                        <td>Oct 2024</td>
                     </tr>
                     <tr onclick="window.open('https://foodbanknyc.github.io/FY24Stats.pdf#page=1', '_blank');"
                         style="cursor: pointer;">
