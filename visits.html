@@ -25,7 +25,7 @@
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
             padding: 20px;
-            width: 90%; /* Makes it fit well on mobile screens */
+            width: 90%;
             max-width: 400px;
             box-sizing: border-box;
             text-align: center;
@@ -41,7 +41,6 @@
             margin-bottom: 20px;
         }
 
-        /* Input Field */
         label {
             display: block;
             font-size: 1em;
@@ -58,7 +57,6 @@
             margin-bottom: 15px;
         }
 
-        /* Submit Button */
         button[type="submit"] {
             width: 100%;
             padding: 12px;
@@ -83,7 +81,7 @@
 </head>
 <body>
     <form id="family-size-form">
-        <h1> </h1>
+        <h1>Welcome to Our Food Bank</h1>
         <p>Please enter your family size and click submit.</p>
         <label for="family-size">Family Size:</label>
         <input type="number" id="family-size" name="familySize" min="1" required>
@@ -106,21 +104,26 @@
 
         // Event listener for form submission
         document.getElementById('family-size-form').addEventListener('submit', async (event) => {
-            event.preventDefault();  // Prevent the form from refreshing the page
+            event.preventDefault();
 
-            // Disable the submit button to prevent multiple submissions
             const submitButton = document.getElementById('submit-button');
             submitButton.disabled = true;
 
             const familySize = document.getElementById('family-size').value;
 
-            // Get the fingerprint visitor ID
+            // Show thank you message immediately
+            alert('Thank you! Your information is being recorded.');
+
+            // Hide form immediately
+            document.getElementById('family-size-form').style.display = 'none';
+            sessionStorage.setItem('formSubmitted', 'true');
+
+            // Process fingerprinting and data submission in background
             const fp = await fpPromise;
             const result = await fp.get();
             const visitorId = result.visitorId;
             const timestamp = new Date().toISOString();
 
-            // Prepare data to send
             const data = {
                 visitorId: visitorId,
                 familySize: familySize,
@@ -128,7 +131,6 @@
                 timestamp: timestamp
             };
 
-            // Send data to Google Sheets via Apps Script
             fetch('https://script.google.com/macros/s/AKfycbyJxmtc3AnujnXfjlnO4SnOOVgGXFtVVsG-up_qFWxyTRXHDPPWutJUcUwkMnl9SvoK/exec', {
                 method: 'POST',
                 mode: 'no-cors',  // This disables CORS checks
@@ -136,19 +138,9 @@
                 headers: {
                     'Content-Type': 'application/json'
                 }
-            }).then(response => {
-                console.log('Data submitted successfully', response);
-                alert('Thank you! Your information has been recorded.');
-
-                // Store submission status in session storage
-                sessionStorage.setItem('formSubmitted', 'true');
-                
-                // Hide the form after submission
-                document.getElementById('family-size-form').style.display = 'none';
             }).catch(error => {
                 console.error('Error submitting data:', error);
-                alert('There was an error recording your information. Please try again.');
-                submitButton.disabled = false;  // Re-enable button if there's an error
+                // Optional: You could re-enable the form here or log the error for debugging
             });
         });
     </script>
