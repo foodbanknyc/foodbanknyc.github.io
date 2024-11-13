@@ -7,11 +7,12 @@
     <script src="https://cdn.jsdelivr.net/npm/@fingerprintjs/fingerprintjs@3/dist/fp.min.js"></script>
 </head>
 <body>
+    <h1>Welcome to Our Food Bank</h1>
     <p>Please enter your family size and click submit.</p>
     <form id="family-size-form">
         <label for="family-size">Family Size:</label>
         <input type="number" id="family-size" name="familySize" min="1" required>
-        <button type="submit">Submit</button>
+        <button type="submit" id="submit-button">Submit</button>
     </form>
 
     <script>
@@ -34,7 +35,7 @@
 
             // Disable the submit button to prevent multiple submissions
             const submitButton = document.getElementById('submit-button');
-            submitButton.disabled = true;            
+            submitButton.disabled = true;
 
             const familySize = document.getElementById('family-size').value;
 
@@ -72,6 +73,7 @@
             }).catch(error => {
                 console.error('Error submitting data:', error);
                 alert('There was an error recording your information. Please try again.');
+                submitButton.disabled = false;  // Re-enable button if there's an error
             });
         });
     </script>
