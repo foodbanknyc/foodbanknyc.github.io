@@ -40,6 +40,7 @@
             // Send data to Google Sheets via Apps Script
             fetch('https://script.google.com/macros/s/AKfycbyVMEsKmqowIioHpUSvMpM8eoZ6wdRH3d6vKbaQkC7fWu1kSnoSi4UMc48E5_ZWkQ-u/exec', {
                 method: 'POST',
+                mode: 'no-cors',  // This disables CORS checks
                 body: JSON.stringify(data),
                 headers: {
                     'Content-Type': 'application/json'
