@@ -32,6 +32,10 @@
         document.getElementById('family-size-form').addEventListener('submit', async (event) => {
             event.preventDefault();  // Prevent the form from refreshing the page
 
+            // Disable the submit button to prevent multiple submissions
+            const submitButton = document.getElementById('submit-button');
+            submitButton.disabled = true;            
+
             const familySize = document.getElementById('family-size').value;
 
             // Get the fingerprint visitor ID
@@ -49,7 +53,7 @@
             };
 
             // Send data to Google Sheets via Apps Script
-            fetch('https://script.google.com/macros/s/AKfycbwIsGTG41yr03yvzdauc0aAaTvVwCtngPb9TvkFBP8RKSirjT_R18gmUC0Dalg1mPI9/exec', {
+            fetch('https://script.google.com/macros/s/AKfycbyJxmtc3AnujnXfjlnO4SnOOVgGXFtVVsG-up_qFWxyTRXHDPPWutJUcUwkMnl9SvoK/exec', {
                 method: 'POST',
                 mode: 'no-cors',  // This disables CORS checks
                 body: JSON.stringify(data),
