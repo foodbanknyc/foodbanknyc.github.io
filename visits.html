@@ -95,12 +95,6 @@
         const urlParams = new URLSearchParams(window.location.search);
         const siteId = urlParams.get('siteid') || 'unknown';
 
-        // Check if form has already been submitted in this session
-        if (sessionStorage.getItem('formSubmitted') === 'true') {
-            alert('You have already submitted this form during this session.');
-            document.getElementById('family-size-form').style.display = 'none';
-        }
-
         // Event listener for form submission
         document.getElementById('family-size-form').addEventListener('submit', async (event) => {
             event.preventDefault();
