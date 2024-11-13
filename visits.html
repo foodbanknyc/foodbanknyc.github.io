@@ -18,6 +18,16 @@
         // Initialize FingerprintJS
         const fpPromise = FingerprintJS.load();
 
+        // Get site ID from URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const siteId = urlParams.get('siteid') || 'unknown';
+
+        // Check if form has already been submitted in this session
+        if (sessionStorage.getItem('formSubmitted') === 'true') {
+            alert('You have already submitted this form during this session.');
+            document.getElementById('family-size-form').style.display = 'none';
+        }
+
         // Event listener for form submission
         document.getElementById('family-size-form').addEventListener('submit', async (event) => {
             event.preventDefault();  // Prevent the form from refreshing the page
@@ -34,11 +44,12 @@
             const data = {
                 visitorId: visitorId,
                 familySize: familySize,
+                siteId: siteId,
                 timestamp: timestamp
             };
 
             // Send data to Google Sheets via Apps Script
-            fetch('https://script.google.com/macros/s/AKfycbyVMEsKmqowIioHpUSvMpM8eoZ6wdRH3d6vKbaQkC7fWu1kSnoSi4UMc48E5_ZWkQ-u/exec', {
+            fetch('https://script.google.com/macros/s/AKfycbwIsGTG41yr03yvzdauc0aAaTvVwCtngPb9TvkFBP8RKSirjT_R18gmUC0Dalg1mPI9/exec', {
                 method: 'POST',
                 mode: 'no-cors',  // This disables CORS checks
                 body: JSON.stringify(data),
@@ -48,6 +59,12 @@
             }).then(response => {
                 console.log('Data submitted successfully', response);
                 alert('Thank you! Your information has been recorded.');
+
+                // Store submission status in session storage
+                sessionStorage.setItem('formSubmitted', 'true');
+                
+                // Hide the form after submission
+                document.getElementById('family-size-form').style.display = 'none';
             }).catch(error => {
                 console.error('Error submitting data:', error);
                 alert('There was an error recording your information. Please try again.');
