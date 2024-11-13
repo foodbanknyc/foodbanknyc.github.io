@@ -81,7 +81,6 @@
 </head>
 <body>
     <form id="family-size-form">
-        <h1>Welcome to Our Food Bank</h1>
         <p>Please enter your family size and click submit.</p>
         <label for="family-size">Family Size:</label>
         <input type="number" id="family-size" name="familySize" min="1" required>
@@ -96,6 +95,12 @@
         const urlParams = new URLSearchParams(window.location.search);
         const siteId = urlParams.get('siteid') || 'unknown';
 
+        // Check if form has already been submitted in this session
+        if (sessionStorage.getItem('formSubmitted') === 'true') {
+            alert('You have already submitted this form during this session.');
+            document.getElementById('family-size-form').style.display = 'none';
+        }
+
         // Event listener for form submission
         document.getElementById('family-size-form').addEventListener('submit', async (event) => {
             event.preventDefault();
@@ -105,14 +110,7 @@
 
             const familySize = document.getElementById('family-size').value;
 
-            // Show thank you message immediately
-            alert('Thank you! Your information is being recorded.');
-
-            // Hide form immediately
-            document.getElementById('family-size-form').style.display = 'none';
-            sessionStorage.setItem('formSubmitted', 'true');
-
-            // Process fingerprinting and data submission in background
+            // Get the fingerprint visitor ID and initiate data submission
             const fp = await fpPromise;
             const result = await fp.get();
             const visitorId = result.visitorId;
@@ -125,6 +123,7 @@
                 timestamp: timestamp
             };
 
+            // Start fetch request immediately
             fetch('https://script.google.com/macros/s/AKfycbzGlqTWBA16mvGn8M_Iv5ra5WbwVKfMrxfHO6eFLvXcFQOp3AanXCS4qPphQCiFm-hS/exec', {
                 method: 'POST',
                 mode: 'no-cors',  // This disables CORS checks
@@ -136,6 +135,11 @@
                 console.error('Error submitting data:', error);
                 // Optional: You could re-enable the form here or log the error for debugging
             });
+
+            // Show thank you message and hide the form right away
+            alert('Thank you! Your information is being recorded.');
+            document.getElementById('family-size-form').style.display = 'none';
+            sessionStorage.setItem('formSubmitted', 'true');
         });
     </script>
 </body>
