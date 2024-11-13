@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Family Size Submission</title>
+    <script src="https://cdn.jsdelivr.net/npm/@fingerprintjs/fingerprintjs@3/dist/fp.min.js"></script>
+</head>
+<body>
+    <p>Please enter your family size and click submit.</p>
+    <form id="family-size-form">
+        <label for="family-size">Family Size:</label>
+        <input type="number" id="family-size" name="familySize" min="1" required>
+        <button type="submit">Submit</button>
+    </form>
+
+    <script>
+        // Initialize FingerprintJS
+        const fpPromise = FingerprintJS.load();
+
+        // Event listener for form submission
+        document.getElementById('family-size-form').addEventListener('submit', async (event) => {
+            event.preventDefault();  // Prevent the form from refreshing the page
+
+            const familySize = document.getElementById('family-size').value;
+
+            // Get the fingerprint visitor ID
+            const fp = await fpPromise;
+            const result = await fp.get();
+            const visitorId = result.visitorId;
+            const timestamp = new Date().toISOString();
+
+            // Prepare data to send
+            const data = {
+                visitorId: visitorId,
+                familySize: familySize,
+                timestamp: timestamp
+            };
+
+            // Send data to Google Sheets via Apps Script
+            fetch('https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec', {
+                method: 'POST',
+                body: JSON.stringify(data),
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            }).then(response => {
+                console.log('Data submitted successfully', response);
+                alert('Thank you! Your information has been recorded.');
+            }).catch(error => {
+                console.error('Error submitting data:', error);
+                alert('There was an error recording your information. Please try again.');
+            });
+        });
+    </script>
+</body>
+</html>
