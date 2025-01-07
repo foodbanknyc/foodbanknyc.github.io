@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>FBNYC Find Food Map</title>
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css"
+    crossorigin=""
+  />
+
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: Arial, sans-serif;
+      box-sizing: border-box;
+    }
+
+    #container {
+      display: flex;
+      flex-direction: row;
+      height: 100%;
+      width: 100%;
+    }
+
+    #map-container {
+      width: 70%;
+      position: relative;
+    }
+
+    #sidebar {
+      width: 30%;
+      border-left: 2px solid #ddd;
+      padding: 16px;
+      overflow-y: auto;
+      background-color: #FFFFFF;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+    }
+    #sidebar h2 {
+      margin-top: 0;
+    }
+    #sidebar .info {
+      margin-bottom: 16px;
+    }
+    #sidebar .filters {
+      margin-top: 16px;
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+      border: 2px solid #ccc;
+      box-sizing: border-box;
+    }
+
+    table.pantry-table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-top: 8px;
+    }
+    table.pantry-table th,
+    table.pantry-table td {
+      border: 1px solid #ccc;
+      padding: 4px;
+      font-size: 0.9em;
+      text-align: left;
+    }
+    table.pantry-table thead {
+      background-color: #f0f0f0;
+    }
+    .agency-name {
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 4px;
+    }
+    .agency-address {
+      margin-bottom: 8px;
+      text-align: center;
+    }
+
+    .leaflet-container {
+      cursor: default;
+    }
+    .leaflet-marker-icon:hover {
+      cursor: pointer;
+    }
+
+    #legend {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      z-index: 1000;
+      background: rgba(255, 255, 255, 0.9);
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 0.9em;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+    
+    #legend .legend-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+    #legend .color-box {
+      width: 12px;
+      height: 12px;
+      margin-right: 8px;
+      border: 1px solid #333;
+    }
+
+    .search-input {
+      margin-bottom: 8px;
+      padding: 6px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .filter-section {
+      margin-bottom: 12px;
+    }
+
+    #logo {
+      position: absolute;
+      bottom: 20px;
+      right: 25px;
+      width: 150px;
+    }
+
+    .button-container {
+  display: flex;
+  justify-content: center;
+  margin: 12px 0;
+  padding-bottom: 25px;
+}
+
+#directions-button {
+  padding: 8px 16px;
+  font-size: 1em;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+#directions-button:hover {
+  background-color: #0056b3;
+}
+
+  </style>
+</head>
+<body>
+  <div id="container">
+    <div id="map-container">
+      <div id="map"></div>
+      <div id="legend">
+        <div class="legend-item">
+          <div class="color-box" style="background-color: #FFA500;"></div> Pantry Bag Distribution
+        </div>
+        <div class="legend-item">
+          <div class="color-box" style="background-color: #c04343;"></div> Breakfast
+        </div>
+        <div class="legend-item">
+          <div class="color-box" style="background-color: #3CB371;"></div> Lunch
+        </div>
+        <div class="legend-item">
+          <div class="color-box" style="background-color: #4682B4;"></div> Dinner
+        </div>
+      </div>
+    </div>
+
+    <div id="sidebar">
+      <div>
+        <h2>Find Food</h2>
+        <div class="info" id="info-text">Click on a marker to view details here.</div>
+        <div id="details"></div>
+      </div>
+
+      <!-- Filters Section -->
+      <div class="filters">
+        <div class="filter-section">
+          <input
+            type="text"
+            id="zip-search"
+            class="search-input"
+            placeholder="Search by ZIP code"
+          />
+        </div>
+
+        <div class="filter-section">
+          <strong>Filter by Day of the Week:</strong><br />
+          <label><input type="checkbox" class="day-filter" value="Monday" /> Monday</label><br />
+          <label><input type="checkbox" class="day-filter" value="Tuesday" /> Tuesday</label><br />
+          <label><input type="checkbox" class="day-filter" value="Wednesday" /> Wednesday</label><br />
+          <label><input type="checkbox" class="day-filter" value="Thursday" /> Thursday</label><br />
+          <label><input type="checkbox" class="day-filter" value="Friday" /> Friday</label><br />
+          <label><input type="checkbox" class="day-filter" value="Saturday" /> Saturday</label><br />
+          <label><input type="checkbox" class="day-filter" value="Sunday" /> Sunday</label>
+        </div>
+
+        <div class="filter-section">
+          <strong>Filter by Meal Type:</strong><br />
+          <label><input type="checkbox" class="meal-filter" value="Pantry Bag Distribution" /> Pantry Bag</label><br />
+          <label><input type="checkbox" class="meal-filter" value="Breakfast" /> Breakfast</label><br />
+          <label><input type="checkbox" class="meal-filter" value="Lunch" /> Lunch</label><br />
+          <label><input type="checkbox" class="meal-filter" value="Dinner" /> Dinner</label><br />
+        </div>
+      </div>
+      <!-- Logo -->
+      <img id="logo" src="images/logo.jpg" alt="FBNYC Logo">
+    </div>
+  </div>
+
+  <script
+    src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"
+    crossorigin=""
+  ></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
+
+  <script>
+    let allData = []; // Store all parsed data
+    let filteredData = []; // Store data after filtering
+
+    const map = L.map('map', {
+      minZoom: 11, // Prevent zooming out too much
+      maxZoom: 19
+    }).setView([40.7128, -74.0060], 12);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    if ('geolocation' in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const { latitude, longitude } = position.coords;
+      
+            // NYC bounding box (approximate)
+            const nycBounds = {
+              minLat: 40.4774,
+              maxLat: 40.9176,
+              minLng: -74.2591,
+              maxLng: -73.7004
+            };
+      
+            // Check if user is within NYC bounds
+            if (
+              latitude >= nycBounds.minLat &&
+              latitude <= nycBounds.maxLat &&
+              longitude >= nycBounds.minLng &&
+              longitude <= nycBounds.maxLng
+            ) {
+              map.setView([latitude, longitude], 14);
+            } else {
+              console.warn('User is outside NYC. Defaulting to NYC.');
+              map.setView([40.7128, -74.0060], 11);
+            }
+          },
+          (error) => {
+            console.warn('Geolocation denied or unavailable:', error);
+            map.setView([40.7128, -74.0060], 11); // Default to NYC if geolocation fails
+          }
+        );
+      } else {
+        map.setView([40.7128, -74.0060], 11); // Default to NYC if geolocation is not supported
+      }
+      
+
+    const csvUrl =
+      "https://fbnycstorage1.blob.core.windows.net/mapdata/FBNCYAgencyDaysandHoursViewResults476.csv?sv=2022-11-02&ss=bfqt&srt=co&sp=r&se=2025-01-08T01:59:47Z&st=2025-01-07T17:59:47Z&spr=https&sig=seYjcV6k7lbBdVY40kYmxq89skj3S5RvJqfSEO2A3FQ%3D";
+
+    Papa.parse(csvUrl, {
+      download: true,
+      header: true,
+      complete: (results) => {
+        allData = results.data.filter((row) => row["Inactive"] === "No");
+        filteredData = allData;
+        addCircleMarkers(filteredData);
+      },
+      error: (err) => {
+        console.error("Error parsing CSV:", err);
+      }
+    });
+
+    function addCircleMarkers(data) {
+      map.eachLayer((layer) => {
+        if (layer instanceof L.CircleMarker) map.removeLayer(layer);
+      });
+
+      data.forEach((row) => {
+        const lat = parseFloat(row["Latitude"]);
+        const lng = parseFloat(row["Longitude"]);
+        if (isNaN(lat) || isNaN(lng)) return;
+
+        const mealType = row["Meal Type"] || "Pantry Bag Distribution";
+        const color = getMealColor(mealType);
+
+        const marker = L.circleMarker([lat, lng], {
+          radius: 5,
+          fillColor: color,
+          color: "#333",
+          weight: 1,
+          opacity: 1,
+          fillOpacity: 1
+        }).addTo(map);
+
+        marker.on("click", () => {
+          updateSideBar(row["Agency"], row);
+        });
+      });
+    }
+
+    function getMealColor(mealType) {
+      const typeLower = mealType.toLowerCase();
+      if (typeLower.includes("breakfast")) return "#c04343";
+      if (typeLower.includes("lunch")) return "#3CB371";
+      if (typeLower.includes("dinner")) return "#4682B4";
+      return "#FFA500"; // Default color for Pantry Bag Distribution
+    }
+
+    function updateSideBar(agency, row) {
+      document.getElementById("info-text").style.display = "none";
+      const html = buildSideBarContent(agency, row);
+      document.getElementById("details").innerHTML = html;
+    }
+
+    function buildSideBarContent(agency, row) {
+      const agencyName = agency.split(":")[1]?.trim() || agency; // Take only the part after the colon
+      const address1 = row["Address 1"] || "";
+      const address2 = row["Address 2"] || "";
+      const address4 = row["Address 4"] || ""; // Assuming Address 4 contains the ZIP code
+      const fullAddress = `${agencyName}, ${address1}, ${address2}, ${address4}`.trim();
+    
+      return `
+        <div class="agency-name">${agencyName}</div>
+        <div class="agency-address">${address1}</div>
+        <div class="agency-address">${address2}</div>
+        <div class="agency-address">${row["Address 3"] || ""}</div>
+        <div class="agency-address">${address4}</div>
+        <div class="button-container">
+          <button id="directions-button" onclick="getDirections('${fullAddress}')">Get Directions</button>
+        </div>
+        <table class="pantry-table">
+          <thead>
+            <tr>
+              <th>Day</th>
+              <th>Open</th>
+              <th>Close</th>
+              <th>Frequency</th>
+              <th>24/7</th>
+              <th>Meal Type</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>${row["Day of the Week"] || ""}</td>
+              <td>${row["Opening Hour"] || ""}</td>
+              <td>${row["Closing Hour"] || ""}</td>
+              <td>${row["Frequency"] || ""}</td>
+              <td>${row["24/7"] || ""}</td>
+              <td>${row["Meal Type"] || "Pantry Bag Distribution"}</td>
+            </tr>
+          </tbody>
+        </table>
+      `;
+    }
+    
+    let highlightedMarker = null; // Track the currently selected marker
+
+function addCircleMarkers(data) {
+  map.eachLayer((layer) => {
+    if (layer instanceof L.CircleMarker) map.removeLayer(layer);
+  });
+
+  data.forEach((row) => {
+    const lat = parseFloat(row["Latitude"]);
+    const lng = parseFloat(row["Longitude"]);
+    if (isNaN(lat) || isNaN(lng)) return;
+
+    const mealType = row["Meal Type"] || "Pantry Bag Distribution";
+    const color = getMealColor(mealType);
+
+    const marker = L.circleMarker([lat, lng], {
+      radius: 4,
+      fillColor: color,
+      color: "#333",
+      weight: 1,
+      opacity: 1,
+      fillOpacity: 1
+    }).addTo(map);
+
+    marker.on("click", () => {
+      // Reset the previous highlighted marker
+      if (highlightedMarker) {
+        highlightedMarker.setStyle({ radius: 5, weight: 1 });
+      }
+
+      // Highlight the current marker
+      marker.setStyle({ radius: 15, weight: 7 });
+      highlightedMarker = marker;
+
+      updateSideBar(row["Agency"], row);
+    });
+  });
+}
+
+map.on("zoomend", () => {
+  const currentZoom = map.getZoom();
+  const newRadius = Math.max(3, currentZoom - 6); // Dynamically adjust radius
+  map.eachLayer((layer) => {
+    if (layer instanceof L.CircleMarker) {
+      layer.setStyle({ radius: newRadius });
+    }
+  });
+});
+
+    
+    function getDirections(address) {
+      const encodedAddress = encodeURIComponent(address);
+      const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
+      window.open(mapsUrl, '_blank');
+    }
+    
+
+    document.getElementById("zip-search").addEventListener("input", (e) => {
+      const zip = e.target.value.trim();
+      applyFilters(zip);
+    });
+
+    document.querySelectorAll(".day-filter, .meal-filter").forEach((checkbox) => {
+      checkbox.addEventListener("change", () => {
+        applyFilters(document.getElementById("zip-search").value.trim());
+      });
+    });
+
+    function applyFilters(zip) {
+      const selectedDays = Array.from(document.querySelectorAll(".day-filter:checked")).map((cb) => cb.value);
+      const selectedMeals = Array.from(document.querySelectorAll(".meal-filter:checked")).map((cb) => cb.value);
+
+      filteredData = allData.filter((row) => {
+        const matchesZip = zip === "" || row["Address 4"].includes(zip);
+        const matchesDay = selectedDays.length === 0 || selectedDays.includes(row["Day of the Week"]);
+        const matchesMeal = selectedMeals.length === 0 || selectedMeals.includes(row["Meal Type"] || "Pantry Bag Distribution");
+        return matchesZip && matchesDay && matchesMeal;
+      });
+
+      if (zip === "" && selectedDays.length === 0 && selectedMeals.length === 0) {
+        filteredData = allData;
+      }
+
+      addCircleMarkers(filteredData);
+    }
+  </script>
+</body>
+</html>
