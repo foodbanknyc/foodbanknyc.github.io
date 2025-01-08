@@ -165,7 +165,7 @@
           <div class="color-box" style="background-color: #FFA500;"></div> Multi-Service
         </div>
         <div class="legend-item">
-          <div class="color-box" style="background-color: #8A2BE2;"></div> Pantry Bag Distribution
+          <div class="color-box" style="background-color: #8A2BE2;"></div> Pantry Bag 
         </div>
         <div class="legend-item">
           <div class="color-box" style="background-color: #c04343;"></div> Breakfast
@@ -267,16 +267,16 @@
               map.setView([latitude, longitude], 14);
             } else {
               console.warn('User is outside NYC. Defaulting to NYC.');
-              map.setView([40.7128, -74.0060], 12);
+              map.setView([40.7128, -74.0060], 11);
             }
           },
           (error) => {
             console.warn('Geolocation denied or unavailable:', error);
-            map.setView([40.7128, -74.0060], 12); // Default to NYC if geolocation fails
+            map.setView([40.7128, -74.0060], 11); // Default to NYC if geolocation fails
           }
         );
       } else {
-        map.setView([40.7128, -74.0060], 12); // Default to NYC if geolocation is not supported
+        map.setView([40.7128, -74.0060], 11); // Default to NYC if geolocation is not supported
       }
       
 
@@ -428,23 +428,31 @@
           opacity: 1,
           fillOpacity: 1
         }).addTo(map);
-    
+        
         marker.on("click", () => {
           if (highlightedMarker) {
-            highlightedMarker.setStyle({ radius: 6, fillColor: highlightedMarker.options.originalColor, weight: 1 });
+            // Reset the previous highlighted marker and bring it to the back
+            highlightedMarker.setStyle({
+              radius: 5,
+              fillColor: highlightedMarker.options.originalColor,
+              weight: 1
+            }).bringToBack();
           }
-    
+        
+          // Set style for the selected marker, increase radius, and bring it to the front
           marker.setStyle({
             radius: 12,
             fillColor: "#007BFF", // Light blue
             color: "#F0F0F0",     // White border
             weight: 3
-          });
-    
+          }).bringToFront();
+        
           marker.options.originalColor = color; // Store original color for reset
           highlightedMarker = marker;
+        
           updateSideBarForLocation(agencies);
         });
+        
       });
     }
     
