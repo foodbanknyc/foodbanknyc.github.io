@@ -162,7 +162,10 @@
       <div id="map"></div>
       <div id="legend">
         <div class="legend-item">
-          <div class="color-box" style="background-color: #FFA500;"></div> Pantry Bag Distribution
+          <div class="color-box" style="background-color: #FFA500;"></div> Multi-Service
+        </div>
+        <div class="legend-item">
+          <div class="color-box" style="background-color: #8A2BE2;"></div> Pantry Bag Distribution
         </div>
         <div class="legend-item">
           <div class="color-box" style="background-color: #c04343;"></div> Breakfast
@@ -174,6 +177,7 @@
           <div class="color-box" style="background-color: #4682B4;"></div> Dinner
         </div>
       </div>
+      
     </div>
 
     <div id="sidebar">
@@ -263,16 +267,16 @@
               map.setView([latitude, longitude], 14);
             } else {
               console.warn('User is outside NYC. Defaulting to NYC.');
-              map.setView([40.7128, -74.0060], 11);
+              map.setView([40.7128, -74.0060], 12);
             }
           },
           (error) => {
             console.warn('Geolocation denied or unavailable:', error);
-            map.setView([40.7128, -74.0060], 11); // Default to NYC if geolocation fails
+            map.setView([40.7128, -74.0060], 12); // Default to NYC if geolocation fails
           }
         );
       } else {
-        map.setView([40.7128, -74.0060], 11); // Default to NYC if geolocation is not supported
+        map.setView([40.7128, -74.0060], 12); // Default to NYC if geolocation is not supported
       }
       
 
@@ -322,11 +326,13 @@
 
     function getMealColor(mealType) {
       const typeLower = mealType.toLowerCase();
+      if (typeLower.includes("pantry bag distribution")) return "#8A2BE2"; // Purple for Pantry Bag
       if (typeLower.includes("breakfast")) return "#c04343";
       if (typeLower.includes("lunch")) return "#3CB371";
       if (typeLower.includes("dinner")) return "#4682B4";
-      return "#FFA500"; // Default color for Pantry Bag Distribution
+      return "#FFA500"; // Default to Orange for Multi-Service
     }
+    
 
     function updateSideBar(agency, row) {
       document.getElementById("info-text").style.display = "none";
@@ -377,43 +383,132 @@
     
     let highlightedMarker = null; // Track the currently selected marker
 
-function addCircleMarkers(data) {
-  map.eachLayer((layer) => {
-    if (layer instanceof L.CircleMarker) map.removeLayer(layer);
-  });
-
-  data.forEach((row) => {
-    const lat = parseFloat(row["Latitude"]);
-    const lng = parseFloat(row["Longitude"]);
-    if (isNaN(lat) || isNaN(lng)) return;
-
-    const mealType = row["Meal Type"] || "Pantry Bag Distribution";
-    const color = getMealColor(mealType);
-
-    const marker = L.circleMarker([lat, lng], {
-      radius: 4,
-      fillColor: color,
-      color: "#333",
-      weight: 1,
-      opacity: 1,
-      fillOpacity: 1
-    }).addTo(map);
-
-    marker.on("click", () => {
-      // Reset the previous highlighted marker
-      if (highlightedMarker) {
-        highlightedMarker.setStyle({ radius: 5, weight: 1 });
-      }
-
-      // Highlight the current marker
-      marker.setStyle({ radius: 15, weight: 7 });
-      highlightedMarker = marker;
-
-      updateSideBar(row["Agency"], row);
-    });
-  });
-}
-
+    function groupByLocation(data) {
+      const locationGroups = {};
+    
+      data.forEach((row) => {
+        // Round latitude and longitude to 4 decimal places to group nearby points
+        const lat = parseFloat(row["Latitude"]).toFixed(8);
+        const lng = parseFloat(row["Longitude"]).toFixed(8);
+        const key = `${lat},${lng}`;
+    
+        if (!locationGroups[key]) {
+          locationGroups[key] = [];
+        }
+        locationGroups[key].push(row);
+      });
+    
+      return locationGroups;
+    }
+    
+    function addCircleMarkers(data) {
+      map.eachLayer((layer) => {
+        if (layer instanceof L.CircleMarker) map.removeLayer(layer);
+      });
+    
+      const locationGroups = groupByLocation(data);
+    
+      Object.entries(locationGroups).forEach(([key, agencies]) => {
+        const [lat, lng] = key.split(",").map(parseFloat);
+    
+        // Check if lat or lng is NaN (invalid)
+        if (isNaN(lat) || isNaN(lng)) {
+          console.warn("Skipping invalid location:", key, agencies);
+          return;
+        }
+    
+        const isMultiService = agencies.length > 1;
+        const color = isMultiService ? "#FFA500" : getMealColor(agencies[0]["Meal Type"]);
+    
+        const marker = L.circleMarker([lat, lng], {
+          radius: 5,
+          fillColor: color,
+          color: "#333",
+          weight: 1,
+          opacity: 1,
+          fillOpacity: 1
+        }).addTo(map);
+    
+        marker.on("click", () => {
+          if (highlightedMarker) {
+            highlightedMarker.setStyle({ radius: 6, fillColor: highlightedMarker.options.originalColor, weight: 1 });
+          }
+    
+          marker.setStyle({
+            radius: 12,
+            fillColor: "#007BFF", // Light blue
+            color: "#F0F0F0",     // White border
+            weight: 3
+          });
+    
+          marker.options.originalColor = color; // Store original color for reset
+          highlightedMarker = marker;
+          updateSideBarForLocation(agencies);
+        });
+      });
+    }
+    
+    
+    function updateSideBarForLocation(agencies) {
+      document.getElementById("info-text").style.display = "none";
+    
+      const firstAgency = agencies[0];
+      const agencyName = firstAgency["Agency"].split(":")[1]?.trim() || firstAgency["Agency"];
+      const address1 = firstAgency["Address 1"] || "";
+      const address4 = firstAgency["Address 4"] || "";
+    
+      // Prioritize Address 1 and Address 4 for Google Maps
+      const fullAddress = `${address1}, ${address4}${agencyName ? `, ${agencyName}` : ""}`.trim();
+    
+      // Sort by day of the week, then by Meal Type
+      const dayOrder = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+      agencies.sort((a, b) => {
+        const dayComparison = dayOrder.indexOf(a["Day of the Week"]) - dayOrder.indexOf(b["Day of the Week"]);
+        if (dayComparison !== 0) return dayComparison;
+        return (a["Meal Type"] || "").localeCompare(b["Meal Type"] || "");
+      });
+    
+      let tableRows = "";
+      agencies.forEach((row) => {
+        tableRows += `
+          <tr>
+            <td>${row["Day of the Week"] || ""}</td>
+            <td>${row["Meal Type"] || ""}</td>
+            <td>${row["Frequency"] || ""}</td>
+            <td>${row["Opening Hour"] || ""}</td>
+            <td>${row["Closing Hour"] || ""}</td>
+          </tr>
+        `;
+      });
+    
+      const html = `
+        <div class="agency-name">${agencyName}</div>
+        <div class="agency-address">${address1}</div>
+        <div class="agency-address">${address4}</div>
+        <div class="button-container">
+          <button id="directions-button" onclick="getDirections('${fullAddress}')">Get Directions</button>
+        </div>
+        <table class="pantry-table">
+          <thead>
+            <tr>
+              <th>Day</th>
+              <th>Meal Type</th>
+              <th>Frequency</th>
+              <th>Open</th>
+              <th>Close</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tableRows}
+          </tbody>
+        </table>
+      `;
+    
+      document.getElementById("details").innerHTML = html;
+    }
+    
+    
+    
 map.on("zoomend", () => {
   const currentZoom = map.getZoom();
   const newRadius = Math.max(3, currentZoom - 6); // Dynamically adjust radius
