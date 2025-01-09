@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <title>FBNYC Find Food Map</title>
+  <link rel="icon" href="lightning.png" type="image/x-icon">
   <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css"
@@ -278,7 +279,51 @@
       } else {
         map.setView([40.7128, -74.0060], 11); // Default to NYC if geolocation is not supported
       }
-      
+      if ('geolocation' in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const { latitude, longitude } = position.coords;
+    
+            // Add user location pin
+            const userMarker = L.circleMarker([latitude, longitude], {
+              radius: 10,
+              fillColor: "#007BFF", // Light blue
+              color: "#F0F0F0",     // White border
+              weight: 3,
+              opacity: 1,
+              fillOpacity: 1
+            }).addTo(map).bindPopup("You are here").openPopup();
+    
+            // NYC bounding box (approximate)
+            const nycBounds = {
+              minLat: 40.4774,
+              maxLat: 40.9176,
+              minLng: -74.2591,
+              maxLng: -73.7004
+            };
+    
+            // Check if user is within NYC bounds
+            if (
+              latitude >= nycBounds.minLat &&
+              latitude <= nycBounds.maxLat &&
+              longitude >= nycBounds.minLng &&
+              longitude <= nycBounds.maxLng
+            ) {
+              map.setView([latitude, longitude], 14);
+            } else {
+              console.warn('User is outside NYC. Defaulting to NYC.');
+              map.setView([40.7128, -74.0060], 11);
+            }
+          },
+          (error) => {
+            console.warn('Geolocation denied or unavailable:', error);
+            map.setView([40.7128, -74.0060], 11); // Default to NYC if geolocation fails
+          }
+        );
+    } else {
+        map.setView([40.7128, -74.0060], 11); // Default to NYC if geolocation is not supported
+    }
+    
 
     const csvUrl =
       "https://fbnycstorage1.blob.core.windows.net/mapdata/FBNCYAgencyDaysandHoursViewResults476.csv?sv=2022-11-02&ss=bf&srt=sco&sp=rtfx&se=2100-01-08T04:34:50Z&st=2025-01-07T20:34:50Z&spr=https&sig=BDKOs4eQcUvckRRSXr5W0OQ0bGkSlZDAQ9r%2FbvXOUxA%3D";
@@ -442,7 +487,7 @@
           // Set style for the selected marker, increase radius, and bring it to the front
           marker.setStyle({
             radius: 12,
-            fillColor: "#007BFF", // Light blue
+            fillColor: "#FB4945", // Red center
             color: "#F0F0F0",     // White border
             weight: 3
           }).bringToFront();
