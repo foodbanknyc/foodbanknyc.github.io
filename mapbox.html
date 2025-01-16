@@ -5,16 +5,21 @@
   <title>FBNYC Find Food Map</title>
   <link rel="icon" href="lightning.png" type="image/x-icon">
 
-  <!-- Mapbox & Papa Parse -->
+  <!-- Meta viewport to ensure mobile devices use their real width -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Mapbox + Papa Parse -->
   <link
     href="https://api.mapbox.com/mapbox-gl-js/v2.13.0/mapbox-gl.css"
     rel="stylesheet"
   />
-  <script src="https://api.mapbox.com/mapbox-gl-js/v2.13.0/mapbox-gl.js"></script>
+  <script
+    src="https://api.mapbox.com/mapbox-gl-js/v2.13.0/mapbox-gl.js"
+  ></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
 
   <style>
-    /* Basic resets */
+    /* Base resets */
     html, body {
       margin: 0;
       padding: 0;
@@ -24,30 +29,28 @@
       box-sizing: border-box;
     }
 
-    /* Container for map + sidebar on large screens */
+    /* Container for map + sidebar side by side on large screens */
     #container {
       display: flex;
-      flex-direction: row; /* side-by-side by default */
+      flex-direction: row; 
       width: 100%;
       height: 100%;
     }
 
-    /* Map container is 70% on large screens */
+    /* Map container (70% on wide screens) */
     #map-container {
       flex: 0 0 70%;
       position: relative;
       display: flex;
       flex-direction: column;
-      min-height: 400px;
+      min-height: 400px; /* enough space on desktop */
     }
-
-    /* Actual map fills its container */
     #map {
       flex: 1;
       border: 2px solid #ccc;
     }
 
-    /* Sidebar is 30% on large screens */
+    /* Desktop Sidebar (30%) */
     #sidebar {
       flex: 0 0 30%;
       border-left: 2px solid #ddd;
@@ -59,7 +62,7 @@
       overflow-y: auto;
     }
 
-    /* The legend pinned at bottom-left of map container */
+    /* Legend pinned in map container */
     #legend {
       position: absolute;
       bottom: 20px;
@@ -72,48 +75,56 @@
       font-size: 0.9em;
       box-shadow: 0 2px 8px rgba(0,0,0,0.15);
     }
-    .legend-item { display: flex; align-items: center; margin-bottom: 4px; }
+    .legend-item { 
+      display: flex; 
+      align-items: center; 
+      margin-bottom: 4px; 
+    }
     .color-box {
-      width: 12px; height: 12px;
+      width: 12px; 
+      height: 12px;
       margin-right: 8px;
       border: 1px solid #333;
     }
 
-    /* BOTTOM BAR: hidden by default on large screens */
+    /* The bottom bar is hidden by default (desktop) */
     #bottom-bar {
       display: none;
     }
 
-    /* ============ MOBILE LAYOUT ============ */
-    @media (max-width: 768px) {
-      /* Stack map & bottom bar, hide sidebar entirely. */
+    /* 
+      Use a higher breakpoint if your phone’s device width is >768.
+      Try (max-width: 900px) or (max-width: 992px) if 768px doesn't work
+    */
+    @media (max-width: 900px) {
+      /* Stack them (map on top, bottom bar below).
+         Hide the sidebar, show bottom-bar.
+      */
       #container {
         flex-direction: column;
-        height: auto; /* allow page scrolling if needed */
+        height: auto;
       }
-
-      /* The map container becomes full width, minimal height on mobile */
       #map-container {
         width: 100%;
-        height: 300px; 
+        height: 300px;
       }
       #map {
         height: 100%;
       }
 
-      /* Hide the sidebar on mobile */
+      /* Hide sidebar on narrow screens */
       #sidebar {
-        display: none !important; /* force hidden */
+        display: none !important;
       }
 
       /* Show bottom bar instead */
       #bottom-bar {
-        display: block;  /* visible on mobile */
+        display: block;
         position: absolute;
         bottom: 0;
         left: 0;
         width: 100%;
-        height: 220px; /* or as you prefer */
+        height: 220px;  /* or as you prefer */
         background: #fff;
         border-top: 2px solid #ddd;
         padding: 16px;
@@ -123,7 +134,9 @@
       }
     }
 
-    /* ============ FILTERS, TABLES, ETC. ============ */
+    /* 
+      Table, search, filters, etc.
+    */
     .search-input {
       margin-bottom: 8px;
       margin-top: 20px;
@@ -148,21 +161,14 @@
     table.pantry-table thead {
       background-color: #f0f0f0;
     }
-    .agency-name {
-      font-weight: bold;
-      text-align: center;
-      margin-bottom: 4px;
-    }
-    .agency-address {
-      margin-bottom: 8px;
-      text-align: center;
-    }
+    .agency-name { font-weight: bold; text-align: center; margin-bottom: 4px; }
+    .agency-address { margin-bottom: 8px; text-align: center; }
 
     /* Buttons */
     .button-container {
-      display: flex; 
-      justify-content: center; 
-      margin: 12px 0; 
+      display: flex;
+      justify-content: center;
+      margin: 12px 0;
       padding-bottom: 25px;
     }
     #directions-button {
@@ -180,7 +186,10 @@
 
     #info-text { margin-bottom: 16px; }
 
-    /* Make pins bigger on smaller screens if desired */
+    /* 
+      Make pins bigger on narrower screens 
+      (In addition, we can also do user-agent checks if needed)
+    */
     .site-marker {
       width: 12px; 
       height: 12px;
@@ -188,7 +197,7 @@
       border-radius: 50%;
       cursor: pointer;
     }
-    @media (max-width: 768px) {
+    @media (max-width: 900px) {
       .site-marker {
         width: 18px !important;
         height: 18px !important;
@@ -199,7 +208,7 @@
 
 <body>
   <div id="container">
-    <!-- MAP + LEGEND -->
+    <!-- Map container + legend + bottom-bar -->
     <div id="map-container">
       <div id="map"></div>
       <div id="legend">
@@ -220,11 +229,11 @@
         </div>
       </div>
 
-      <!-- Bottom bar for mobile -->
+      <!-- bottom-bar for site details on mobile -->
       <div id="bottom-bar"></div>
     </div>
 
-    <!-- SIDEBAR for Desktop -->
+    <!-- Desktop Sidebar -->
     <div id="sidebar">
       <h2>Find Food</h2>
       <div class="info" id="info-text">Click on a marker to view details here.</div>
@@ -240,7 +249,6 @@
             placeholder="Search by ZIP code"
           />
         </div>
-
         <div class="filter-section">
           <strong>Filter by Day of the Week:</strong><br />
           <label><input type="checkbox" class="day-filter" value="Monday" /> Monday</label><br />
@@ -251,7 +259,6 @@
           <label><input type="checkbox" class="day-filter" value="Saturday" /> Saturday</label><br />
           <label><input type="checkbox" class="day-filter" value="Sunday" /> Sunday</label>
         </div>
-
         <div class="filter-section">
           <strong>Filter by Meal Type:</strong><br />
           <label><input type="checkbox" class="meal-filter" value="Pantry Bag Distribution" /> Pantry Bag</label><br />
@@ -264,7 +271,6 @@
   </div>
 
   <script>
-    // =========== MAP & LOGIC ===========
     mapboxgl.accessToken = "pk.eyJ1IjoiYXJuYXZrcmlzaG5hIiwiYSI6ImNtNXlhc285dTBoNGwybnB4NDRyZ2phNXgifQ.Q1UhzlIAHhPma35DGkdEeg";
 
     let allData = [];
@@ -272,7 +278,6 @@
     let markers = [];
     let highlighted = null;
 
-    // Create map
     const map = new mapboxgl.Map({
       container: "map",
       style: "mapbox://styles/mapbox/streets-v11",
@@ -281,15 +286,13 @@
     });
     map.addControl(new mapboxgl.NavigationControl());
 
-    // Optional geolocation
+    // Geolocation
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           const { latitude, longitude } = pos.coords;
-          if (
-            latitude >= 40.4774 && latitude <= 40.9176 &&
-            longitude >= -74.2591 && longitude <= -73.7004
-          ) {
+          if (latitude >= 40.4774 && latitude <= 40.9176 &&
+              longitude >= -74.2591 && longitude <= -73.7004) {
             map.setCenter([longitude, latitude]);
             map.setZoom(14);
           } else {
@@ -308,7 +311,7 @@
       );
     }
 
-    // Parse CSV
+    // CSV parse
     const csvUrl = "https://fbnycstorage1.blob.core.windows.net/mapdata/FBNCYAgencyDaysandHoursViewResults476.csv?sv=2022-11-02&ss=bf&srt=sco&sp=rtfx&se=2100-01-08T04:34:50Z&st=2025-01-07T20:34:50Z&spr=https&sig=BDKOs4eQcUvckRRSXr5W0OQ0bGkSlZDAQ9r%2FbvXOUxA%3D";
     Papa.parse(csvUrl, {
       download: true,
@@ -337,11 +340,11 @@
           continue;
         }
         const isMulti = agencies.length > 1;
-        const color = isMulti ? "#FFA500" : getMealColor(agencies[0]["Meal Type"]);
+        const color = isMulti ? "#FFA500" : getMealColor(agencies[0]["Meal Type"] );
 
-        // Marker element
+        // Create marker element
         const el = document.createElement("div");
-        el.className = "site-marker"; // We'll rely on CSS + media queries
+        el.className = "site-marker";
         el.style.backgroundColor = color;
 
         const marker = new mapboxgl.Marker(el).setLngLat([lng, lat]).addTo(map);
@@ -349,30 +352,26 @@
 
         el.addEventListener("click", () => {
           highlightMarker(marker, color);
-          if (window.innerWidth <= 768) {
-            // Show details in bottom bar on smaller screens
-            updateBottomBarForLocation(agencies);
+          if (window.innerWidth <= 900) {
+            updateMobileBar(agencies);
           } else {
-            // Show details in the right sidebar on larger screens
-            updateSideBarForLocation(agencies);
+            updateSidebar(agencies);
           }
         });
       }
     }
 
     function highlightMarker(marker, originalColor) {
-      // Reset previously highlighted
       if (highlighted) {
         highlighted.el.style.width = "12px";
         highlighted.el.style.height = "12px";
         highlighted.el.style.backgroundColor = highlighted.color;
         highlighted.el.style.border = "2px solid #333";
       }
-      // Highlight new
       const el = marker.getElement();
       el.style.width = "20px";
       el.style.height = "20px";
-      el.style.backgroundColor = "#FF3333"; // darker red
+      el.style.backgroundColor = "#FF3333";
       el.style.border = "2px solid #FFF";
       highlighted = { marker, el, color: originalColor };
     }
@@ -383,12 +382,12 @@
       if (t.includes("breakfast")) return "#c04343";
       if (t.includes("lunch")) return "#3CB371";
       if (t.includes("dinner")) return "#4682B4";
-      return "#FFA500"; // default
+      return "#FFA500";
     }
 
-    function groupByLocation(data) {
+    function groupByLocation(rows) {
       const obj = {};
-      data.forEach((row) => {
+      rows.forEach((row) => {
         const lat = parseFloat(row["Latitude"]).toFixed(8);
         const lng = parseFloat(row["Longitude"]).toFixed(8);
         const key = `${lat},${lng}`;
@@ -399,30 +398,28 @@
     }
 
     // Desktop sidebar
-    function updateSideBarForLocation(agencies) {
-      const infoText = document.getElementById("info-text");
-      infoText.style.display = "none";
+    function updateSidebar(agencies) {
+      document.getElementById("info-text").style.display = "none";
       const details = document.getElementById("details");
-
-      const html = buildSiteHTML(agencies);
-      details.innerHTML = html;
+      details.innerHTML = buildSiteHTML(agencies);
     }
 
     // Mobile bottom bar
-    function updateBottomBarForLocation(agencies) {
+    function updateMobileBar(agencies) {
       const bottomBar = document.getElementById("bottom-bar");
       bottomBar.innerHTML = buildSiteHTML(agencies);
     }
 
-    // Reusable function to generate the table of site info
+    // Reusable site info builder
     function buildSiteHTML(agencies) {
       const first = agencies[0];
       const agencyName = first["Agency"].split(":")[1]?.trim() || first["Agency"];
       const address1 = first["Address 1"] || "";
       const address4 = first["Address 4"] || "";
 
+      // Sort
       const dayOrder = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
-      agencies.sort((a, b) => {
+      agencies.sort((a,b) => {
         const d = dayOrder.indexOf(a["Day of the Week"]) - dayOrder.indexOf(b["Day of the Week"]);
         if(d!==0) return d;
         return (a["Meal Type"]||"").localeCompare(b["Meal Type"]||"");
@@ -467,38 +464,37 @@
       `;
     }
 
-    function getDirections(address) {
-      const encoded = encodeURIComponent(address);
+    function getDirections(addr) {
+      const encoded = encodeURIComponent(addr);
       const url = `https://www.google.com/maps/search/?api=1&query=${encoded}`;
       window.open(url, "_blank");
     }
 
-    // FILTERS
+    // Filter logic
     document.getElementById("zip-search").addEventListener("input", (e) => {
-      const zip = e.target.value.trim();
-      applyFilters(zip);
+      applyFilters(e.target.value.trim());
     });
-    document.querySelectorAll(".day-filter, .meal-filter").forEach((el) => {
-      el.addEventListener("change", () => {
+    document.querySelectorAll(".day-filter, .meal-filter").forEach((box) => {
+      box.addEventListener("change", () => {
         applyFilters(document.getElementById("zip-search").value.trim());
       });
     });
 
     function applyFilters(zip) {
-      const selectedDays = Array.from(document.querySelectorAll(".day-filter:checked")).map((cb) => cb.value);
-      const selectedMeals = Array.from(document.querySelectorAll(".meal-filter:checked")).map((cb) => cb.value);
+      const days = Array.from(document.querySelectorAll(".day-filter:checked")).map((cb) => cb.value);
+      const meals = Array.from(document.querySelectorAll(".meal-filter:checked")).map((cb) => cb.value);
 
       filteredData = allData.filter((row) => {
         const day = row["Day of the Week"];
         const meal = row["Meal Type"] || "Pantry Bag Distribution";
         const zipVal = row["Address 4"] || "";
-        const zipCheck = zip === "" || zipVal.includes(zip);
-        const dayCheck = selectedDays.length === 0 || selectedDays.includes(day);
-        const mealCheck = selectedMeals.length === 0 || selectedMeals.includes(meal);
+        const zipCheck = !zip || zipVal.includes(zip);
+        const dayCheck = days.length === 0 || days.includes(day);
+        const mealCheck = meals.length === 0 || meals.includes(meal);
         return zipCheck && dayCheck && mealCheck;
       });
 
-      if (zip === "" && selectedDays.length === 0 && selectedMeals.length === 0) {
+      if (!zip && days.length === 0 && meals.length === 0) {
         filteredData = allData;
       }
 
