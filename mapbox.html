@@ -3,22 +3,13 @@
 <head>
   <meta charset="utf-8" />
   <title>FBNYC Find Food Map</title>
-  <link rel="icon" href="lightning.png" type="image/x-icon">
-
-  <!-- Mapbox GL JS -->
-  <link
-    href="https://api.mapbox.com/mapbox-gl-js/v2.13.0/mapbox-gl.css"
-    rel="stylesheet"
-  />
-  <script
-    src="https://api.mapbox.com/mapbox-gl-js/v2.13.0/mapbox-gl.js"
-  ></script>
-
-  <!-- Papa Parse -->
+  <!-- Mapbox and Papa Parse CSS/JS -->
+  <link href="https://api.mapbox.com/mapbox-gl-js/v2.13.0/mapbox-gl.css" rel="stylesheet"/>
+  <script src="https://api.mapbox.com/mapbox-gl-js/v2.13.0/mapbox-gl.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
 
   <style>
-    /* Base styling */
+    /* Remove overflow: hidden so mobile can scroll and pinch-zoom properly */
     html, body {
       margin: 0;
       padding: 0;
@@ -26,68 +17,63 @@
       height: 100%;
       font-family: Arial, sans-serif;
       box-sizing: border-box;
-      overflow: hidden; /* no scroll bars for the entire page */
     }
 
-    /* Container for map + sidebar side by side on large screens */
     #container {
       display: flex;
-      flex-direction: row; /* side by side by default */
+      flex-direction: row;
       width: 100%;
-      height: 100%;
-      overflow: hidden; /* hide scrollbars if any appear */
+      height: 100%; /* Let it fill the screen, but allow scrolling if needed */
     }
 
-    /* Map container occupies 70% width on larger screens */
+    /* Map container on the left (70%) for wide screens */
     #map-container {
       flex: 0 0 70%;
-      position: relative; /* for legend to be absolute within this container if needed */
+      position: relative;
       display: flex;
       flex-direction: column;
+      min-height: 400px; /* so there's enough height for the map on smaller desktops */
     }
-    /* The actual map takes up all the space of #map-container */
     #map {
-      flex: 1; 
+      flex: 1;
       border: 2px solid #ccc;
     }
 
-    /* Sidebar is 30% on larger screens */
+    /* Sidebar on the right (30%) for wide screens */
     #sidebar {
       flex: 0 0 30%;
       border-left: 2px solid #ddd;
       padding: 16px 32px 16px 16px;
-      overflow-y: auto;
       background-color: #FFFFFF;
       display: flex;
       flex-direction: column;
-      padding: 16px 32px 16px 16px; /* right = 32px */
-      box-sizing: border-box;       /* ensure the padding counts */
-      overflow-y: auto;
+      box-sizing: border-box;
+      overflow-y: auto; /* allow internal scrolling if content is tall */
     }
 
-    /* Stack them on narrow screens */
+    /* On narrower screens, stack the map on top, sidebar below */
     @media (max-width: 768px) {
       #container {
-        flex-direction: column; /* stacked vertically */
+        flex-direction: column;
+        height: auto; /* let page scroll naturally */
       }
       #map-container {
-        flex: 0 0 auto;
         width: 100%;
-        height: 50%; /* half the screen height for the map */
+        height: 300px; /* minimal map height on mobile */
       }
       #map {
-        height: 100%; /* fill that 50% height */
+        height: 100%;
       }
       #sidebar {
-        flex: 0 0 auto;
         width: 100%;
-        height: 50%;
-        border-left: none;       /* remove side border */
-        border-top: 2px solid #ddd; /* optional for separation */
+        min-height: 300px; /* ensure there's space for content */
+        border-left: none;
+        border-top: 2px solid #ddd;
+        overflow-y: auto;
       }
     }
 
-    /* Legend pinned to bottom-left of the map container */
+    /* Legend pinned in map container */
     #legend {
       position: absolute;
       bottom: 20px;
@@ -100,26 +86,30 @@
       font-size: 0.9em;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     }
-    #legend .legend-item {
-      display: flex;
-      align-items: center;
-      margin-bottom: 4px;
-    }
-    #legend .color-box {
-      width: 12px;
-      height: 12px;
+    .legend-item { display: flex; align-items: center; margin-bottom: 4px; }
+    .color-box {
+      width: 12px; height: 12px;
       margin-right: 8px;
       border: 1px solid #333;
     }
 
-    /* Table styling */
+    /* Table, search, filters, etc. */
+    .search-input {
+      margin-bottom: 8px;
+      margin-top: 20px;
+      padding: 6px;
+      width: 80%;
+      max-width: 300px; /* for wide screens, don't exceed 300px */
+      box-sizing: border-box;
+    }
+    .filter-section { margin-bottom: 12px; }
+
     table.pantry-table {
       border-collapse: collapse;
       width: 100%;
       margin-top: 8px;
     }
-    table.pantry-table th,
-    table.pantry-table td {
+    table.pantry-table th, table.pantry-table td {
       border: 1px solid #ccc;
       padding: 4px;
       font-size: 0.9em;
@@ -128,27 +118,8 @@
     table.pantry-table thead {
       background-color: #f0f0f0;
     }
-    .agency-name {
-      font-weight: bold;
-      text-align: center;
-      margin-bottom: 4px;
-    }
-    .agency-address {
-      margin-bottom: 8px;
-      text-align: center;
-    }
-
-    /* Search & Filter UI */
-    .search-input {
-      margin-bottom: 8px;
-      margin-top: 20px;
-      padding: 6px;
-      width: 30%;
-      box-sizing: border-box;
-    }
-    .filter-section {
-      margin-bottom: 12px;
-    }
+    .agency-name { font-weight: bold; text-align: center; margin-bottom: 4px; }
+    .agency-address { margin-bottom: 8px; text-align: center; }
 
     /* Buttons */
     .button-container {
@@ -170,10 +141,7 @@
       background-color: #0056b3;
     }
 
-    /* Extra info text styling */
-    #info-text {
-      margin-bottom: 16px;
-    }
+    #info-text { margin-bottom: 16px; }
   </style>
 </head>
 
