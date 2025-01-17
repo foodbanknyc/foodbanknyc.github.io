@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>FBNYC Find Food Map (One Pane for Desktop & Mobile)</title>
+  <title>FBNYC Find Food Map (One Pane)</title>
   <link rel="icon" href="lightning.png" type="image/x-icon">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
@@ -43,7 +43,7 @@
       scrollbar-color: #999 #f0f0f0;
     }
 
-    /* MAP Container fills entire screen except for the details pane area on desktop */
+    /* MAP filling the screen behind the details pane */
     #map {
       width: 100%;
       height: 100%;
@@ -75,14 +75,13 @@
       border: 1px solid #333;
     }
 
-    /* Unified DETAILS PANE for both desktop & mobile */
+    /* SINGLE DETAILS PANE FOR DESKTOP & MOBILE */
     #details-pane {
       position: fixed; 
       top: 0; 
       bottom: 0;
       right: 0;
-      width: 400px; /* Desktop default width */
-      max-width: 100%;
+      width: 400px; /* Default desktop width */
       background: #fff;
       z-index: 2000;
       box-shadow: -2px 0 8px rgba(0,0,0,0.2);
@@ -98,7 +97,14 @@
       transform: translateX(0);
     }
 
-    /* "Close" button (X) in top-right corner */
+    /* MOBILE: Pane should take the full width so it won't go off left edge */
+    @media (max-width: 900px) {
+      #details-pane {
+        width: 100%;
+      }
+    }
+
+    /* "Close" button */
     .close-pane {
       position: absolute;
       top: 16px;
@@ -107,14 +113,6 @@
       font-size: 1.5em;
       font-weight: bold;
       color: #333;
-    }
-
-    /* On desktop (≥ 900px), we keep #details-pane open as soon as a marker is clicked. 
-       But user can still close it if they want. */
-    @media (min-width: 900px) {
-      #details-pane {
-        width: 30%; /* Or 400px, your choice */
-      }
     }
 
     /* TABLES, FILTERS, ETC. */
@@ -185,14 +183,15 @@
         height: 14px !important;
       }
     }
+
   </style>
 </head>
 <body>
 
-  <!-- MAP (100% wide/height) -->
+  <!-- MAP -->
   <div id="map"></div>
-  
-  <!-- LEGEND pinned on the map -->
+
+  <!-- LEGEND pinned on map -->
   <div id="legend">
     <div class="legend-item">
       <div class="color-box" style="background-color: #FFA500;"></div> Multi-Service
@@ -211,19 +210,16 @@
     </div>
   </div>
 
-  <!-- SINGLE DETAILS PANE FOR BOTH DESKTOP & MOBILE -->
+  <!-- DETAILS PANE -->
   <div id="details-pane">
-    <!-- "X" in top-right to close -->
     <div class="close-pane" onclick="closeDetailsPane()">X</div>
 
-    <!-- The selected agency details will go here -->
+    <!-- Agency details -->
     <div id="details-content">
       <p>Click a marker to view details.</p>
     </div>
 
     <hr />
-
-    <!-- FILTERS BELOW the details -->
     <h3>Filter Results</h3>
     <div class="filters">
       <div class="filter-section">
@@ -259,20 +255,19 @@
 
   <!-- SCRIPTS -->
   <script>
+    // Mapbox
     mapboxgl.accessToken = "pk.eyJ1IjoiYXJuYXZrcmlzaG5hIiwiYSI6ImNtNXlhc285dTBoNGwybnB4NDRyZ2phNXgifQ.Q1UhzlIAHhPma35DGkdEeg";
     let allData = [], filteredData = [], markers = [], highlighted = null;
 
-    // Initialize map
     const map = new mapboxgl.Map({
       container: "map",
       style: "mapbox://styles/mapbox/streets-v11",
       center: [-74.0060, 40.7128],
       zoom: 12
     });
-
     map.addControl(new mapboxgl.NavigationControl());
 
-    // Attempt geolocation
+    // Try geolocation
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
@@ -295,14 +290,12 @@
       download: true,
       header: true,
       complete: (results) => {
-        // Filter out "Inactive" rows
         allData = results.data.filter((row) => row["Inactive"] === "No");
         filteredData = allData;
         addMarkers(filteredData);
       }
     });
 
-    // Build markers on the map
     function addMarkers(data) {
       // remove old
       markers.forEach((m) => m.marker.remove());
@@ -314,10 +307,10 @@
         const [lat, lng] = key.split(",").map(parseFloat);
         if (isNaN(lat) || isNaN(lng)) continue;
 
-        const isMulti = (agencies.length > 1);
+        const isMulti = agencies.length > 1;
         const color = isMulti ? "#FFA500" : getMealColor(agencies[0]["Meal Type"]);
 
-        // Create a pin
+        // Create marker
         const el = document.createElement("div");
         el.className = "site-marker";
         el.style.backgroundColor = color;
@@ -325,7 +318,6 @@
         const marker = new mapboxgl.Marker(el).setLngLat([lng, lat]).addTo(map);
         markers.push({ marker, agencies, color, el });
 
-        // On click
         el.addEventListener("click", () => {
           highlightMarker(marker, color);
           openDetailsPane(agencies);
@@ -333,7 +325,6 @@
       }
     }
 
-    // Group data by lat,lng
     function groupByLocation(rows) {
       const obj = {};
       rows.forEach((r) => {
@@ -346,7 +337,6 @@
       return obj;
     }
 
-    // Meal color
     function getMealColor(mealType) {
       const t = (mealType || "").toLowerCase();
       if (t.includes("pantry bag distribution")) return "#8A2BE2";
@@ -356,16 +346,16 @@
       return "#FFA500";
     }
 
-    // Highlight a marker (make it bigger/red)
+    // HIGHLIGHT MARKER
     function highlightMarker(marker, originalColor) {
-      // reset old highlight
+      // Reset previous
       if (highlighted) {
         highlighted.el.style.width = "12px";
         highlighted.el.style.height = "12px";
         highlighted.el.style.backgroundColor = highlighted.color;
         highlighted.el.style.border = "2px solid #333";
       }
-      // new highlight
+      // Highlight new
       const el = marker.getElement();
       el.style.width = "20px";
       el.style.height = "20px";
@@ -377,21 +367,9 @@
     // DETAILS PANE
     const detailsPane = document.getElementById("details-pane");
     const detailsContent = document.getElementById("details-content");
-    let startX = 0; // for swipe detection
 
-    // Show the details pane (same for desktop & mobile)
-    function openDetailsPane(agencies) {
-      detailsContent.innerHTML = buildAgencyHTML(agencies);
-      // Mark the pane as "open" (translateX(0))
-      detailsPane.classList.add("open");
-    }
-
-    // Close the details pane
-    function closeDetailsPane() {
-      detailsPane.classList.remove("open");
-    }
-
-    // Detect a swipe to the right (mobile)
+    // swipe detection
+    let startX = 0;
     detailsPane.addEventListener("touchstart", (e) => {
       startX = e.touches[0].clientX;
     }, { passive: true });
@@ -404,36 +382,42 @@
       }
     }, { passive: true });
 
-    // Build the selected agency HTML
+    // open/close
+    function openDetailsPane(agencies) {
+      detailsContent.innerHTML = buildAgencyHTML(agencies);
+      detailsPane.classList.add("open");
+    }
+
+    function closeDetailsPane() {
+      detailsPane.classList.remove("open");
+    }
+
     function buildAgencyHTML(agencies) {
-      if (!agencies || !agencies.length) {
-        return "<p>No agency data.</p>";
-      }
-      // Sort the agencies by day, then meal
+      if (!agencies.length) return "<p>No agency data.</p>";
+
+      // sort
       const dayOrder = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
       agencies.sort((a,b) => {
         const d = dayOrder.indexOf(a["Day of the Week"]) - dayOrder.indexOf(b["Day of the Week"]);
         if (d !== 0) return d;
-        return (a["Meal Type"] || "").localeCompare(b["Meal Type"] || "");
+        return (a["Meal Type"]||"").localeCompare(b["Meal Type"]||"");
       });
 
-      // Basic fields
       const first = agencies[0];
       const agencyName = first["Agency"].split(":")[1]?.trim() || first["Agency"];
       const address1 = first["Address 1"] || "";
       const address4 = first["Address 4"] || "";
       const fullAddress = `${address1}, ${address4}${agencyName ? ", " + agencyName : ""}`.trim();
 
-      // table rows
       let rows = "";
       agencies.forEach((r) => {
         rows += `
           <tr>
-            <td>${r["Day of the Week"]||""}</td>
-            <td>${r["Meal Type"]||""}</td>
-            <td>${r["Frequency"]||""}</td>
-            <td>${r["Opening Hour"]||""}</td>
-            <td>${r["Closing Hour"]||""}</td>
+            <td>${r["Day of the Week"] || ""}</td>
+            <td>${r["Meal Type"] || ""}</td>
+            <td>${r["Frequency"] || ""}</td>
+            <td>${r["Opening Hour"] || ""}</td>
+            <td>${r["Closing Hour"] || ""}</td>
           </tr>
         `;
       });
@@ -445,7 +429,6 @@
         <div class="button-container">
           <button id="directions-button" onclick="getDirections('${fullAddress}')">Get Directions</button>
         </div>
-
         <table class="pantry-table">
           <thead>
             <tr>
@@ -463,18 +446,16 @@
       `;
     }
 
-    // Open Google Maps for directions
     function getDirections(addr) {
       const encoded = encodeURIComponent(addr);
       const url = `https://www.google.com/maps/search/?api=1&query=${encoded}`;
       window.open(url, "_blank");
     }
 
-    // FILTERING
+    // FILTERS
     const zipInput = document.getElementById("zip-search");
     zipInput.addEventListener("input", () => applyFilters(zipInput.value));
 
-    // Day/meal checkboxes
     document.querySelectorAll(".day-filter, .meal-filter").forEach((cb) => {
       cb.addEventListener("change", () => {
         applyFilters(zipInput.value);
@@ -495,9 +476,7 @@
         return zipCheck && dayCheck && mealCheck;
       });
 
-      // Rebuild markers
       addMarkers(filteredData);
-      console.log("Filters applied. Filtered data count:", filteredData.length);
     }
   </script>
 </body>
