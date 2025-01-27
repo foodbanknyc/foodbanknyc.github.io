@@ -15,7 +15,7 @@
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
 
   <style>
-    /* Base resets */
+    /* Base resets, no page scrolling */
     html, body {
       margin: 0; 
       padding: 0;
@@ -44,11 +44,11 @@
       scrollbar-color: #999 #f0f0f0;
     }
 
-    /* MAP filling the screen behind the details pane */
+    /* MAP occupies entire screen behind overlays */
     #map {
       width: 100%;
       height: 100%;
-      border: 2px solid #ccc;
+      border: 2px solid #ccc; /* optional border */
     }
 
     /* LEGEND pinned at bottom-left of map */
@@ -76,36 +76,77 @@
       border: 1px solid #333;
     }
 
-    /* SINGLE DETAILS PANE FOR DESKTOP & MOBILE */
+    /* FILTER BUTTON in top-left corner */
+    #filter-button {
+      position: absolute;
+      top: 25px;
+      left: 25px;
+      z-index: 1100;
+      background-color: #ffffff;
+      color: #000000;
+      border:2px solid #333;
+      border-radius: 4px;
+      padding: 8px 16px;
+      cursor: pointer;
+      font-size: 1em;
+      font-weight: bold;
+    }
+    #filter-button:hover {
+      background-color: #d3e6f0;
+    }
+
+    /* LEFT FILTER OVERLAY */
+    #filter-pane {
+      position: fixed;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      width: 350px;
+      max-width: 80%;
+      background: #fff;
+      z-index: 3000;
+      box-shadow: 2px 0 8px rgba(0,0,0,0.2);
+      overflow-y: auto;
+      padding: 16px;
+      transform: translateX(-100%);
+      transition: transform 0.3s ease-in-out;
+    }
+    #filter-pane.open {
+      transform: translateX(0);
+    }
+    .close-filter-pane {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      cursor: pointer;
+      font-size: 1.5em;
+      font-weight: bold;
+      color: #333;
+    }
+
+    /* RIGHT DETAILS PANE (agency info only) */
     #details-pane {
       position: fixed; 
       top: 0; 
       bottom: 0;
       right: 0;
-      width: 450px; /* Default desktop width */
+      width: 450px;
       background: #fff;
       z-index: 2000;
       box-shadow: -2px 0 8px rgba(0,0,0,0.2);
       overflow-y: auto;
       padding: 16px;
-
-      /* Start off-screen to the right */
       transform: translateX(100%);
       transition: transform 0.3s ease-in-out;
     }
-    /* Slide-in (open) state */
     #details-pane.open {
       transform: translateX(0);
     }
-
-    /* MOBILE: Pane should take the full width so it won't go off left edge */
     @media (max-width: 900px) {
       #details-pane {
-        width: 90%;
+        width: 92%;
       }
     }
-
-    /* "Close" button */
     .close-pane {
       position: absolute;
       top: 16px;
@@ -116,16 +157,22 @@
       color: #333;
     }
 
-    /* TABLES, FILTERS, ETC. */
+    /* Agency, phone, address */
     .agency-name {
       font-weight: bold;
       text-align: center;
       margin-bottom: 4px;
     }
     .agency-address {
+      margin-bottom: 4px;
+      text-align: center;
+    }
+    .agency-phone {
       margin-bottom: 8px;
       text-align: center;
     }
+
+    /* Table, button, etc. */
     table.pantry-table {
       border-collapse: collapse;
       width: 100%;
@@ -159,7 +206,7 @@
       background-color: #0056b3;
     }
 
-    /* FILTERS */
+    /* For the filter inputs */
     .filters { margin: 12px 0; }
     .filter-section { margin-bottom: 12px; }
     .search-input {
@@ -185,7 +232,6 @@
         height: 14px !important;
       }
     }
-
   </style>
 </head>
 <body>
@@ -193,7 +239,7 @@
   <!-- MAP -->
   <div id="map"></div>
 
-  <!-- LEGEND pinned on map -->
+  <!-- LEGEND pinned -->
   <div id="legend">
     <div class="legend-item">
       <div class="color-box" style="background-color: #FFA500;"></div> Multi-Service
@@ -212,17 +258,13 @@
     </div>
   </div>
 
-  <!-- DETAILS PANE -->
-  <div id="details-pane">
-    <div class="close-pane" onclick="closeDetailsPane()">X</div>
+  <!-- FILTER BUTTON (top-left) -->
+  <button id="filter-button">Filters</button>
 
-    <!-- Agency details -->
-    <div id="details-content">
-      <p>Click a marker to view details.</p>
-    </div>
-
-    <hr />
-    <h3>Filter Results</h3>
+  <!-- LEFT FILTER OVERLAY -->
+  <div id="filter-pane">
+    <div class="close-filter-pane" onclick="closeFilterPane()">X</div>
+    <h2>Filter Results</h2>
     <div class="filters">
       <div class="filter-section">
         <strong>Filter by Day of the Week:</strong><br />
@@ -255,9 +297,18 @@
     </div>
   </div>
 
-  <!-- SCRIPTS -->
+  <!-- RIGHT DETAILS PANE (Agency Info) -->
+  <div id="details-pane">
+    <div class="close-pane" onclick="closeDetailsPane()">X</div>
+    <div id="details-content">
+      <p>Click a marker to view details.</p>
+    </div>
+  </div>
+
   <script>
-    // Mapbox
+    // -------------------
+    // MAP SETUP
+    // -------------------
     mapboxgl.accessToken = "pk.eyJ1IjoiYXJuYXZrcmlzaG5hIiwiYSI6ImNtNXlhc285dTBoNGwybnB4NDRyZ2phNXgifQ.Q1UhzlIAHhPma35DGkdEeg";
     let allData = [], filteredData = [], markers = [], highlighted = null;
 
@@ -267,9 +318,10 @@
       center: [-74.0060, 40.7128],
       zoom: 12
     });
+
     map.addControl(new mapboxgl.NavigationControl());
 
-    // Try geolocation
+    // Attempt geolocation
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
@@ -287,7 +339,7 @@
     }
 
     // Load CSV
-    const csvUrl = "https://fbnycpublic.blob.core.windows.net/mapdata/FBNCYAgencyDaysandHoursViewResults476.csv?sv=2022-11-02&ss=bfqt&srt=sco&sp=rptfx&se=2050-01-18T03:56:20Z&st=2025-01-17T19:56:20Z&spr=https&sig=u41iVNckMwY%2Fkx76wPlA6CfSUzP9Ls4PUijuBfSsWAY%3D";
+    const csvUrl = "https://fbnycpublic.blob.core.windows.net/mapdata/customsearch228637.csv?sv=2022-11-02&ss=bfqt&srt=sco&sp=rptfx&se=2050-01-18T03:56:20Z&st=2025-01-17T19:56:20Z&spr=https&sig=u41iVNckMwY%2Fkx76wPlA6CfSUzP9Ls4PUijuBfSsWAY%3D";
     Papa.parse(csvUrl, {
       download: true,
       header: true,
@@ -298,8 +350,11 @@
       }
     });
 
+    // -------------------
+    // MARKERS
+    // -------------------
     function addMarkers(data) {
-      // remove old
+      // Remove old markers
       markers.forEach((m) => m.marker.remove());
       markers = [];
 
@@ -309,7 +364,8 @@
         const [lat, lng] = key.split(",").map(parseFloat);
         if (isNaN(lat) || isNaN(lng)) continue;
 
-        const isMulti = agencies.length > 1;
+        // If multiple agencies, color is orange. Otherwise color by meal type
+        const isMulti = (agencies.length > 1);
         const color = isMulti ? "#FFA500" : getMealColor(agencies[0]["Meal Type"]);
 
         // Create marker
@@ -348,16 +404,14 @@
       return "#FFA500";
     }
 
-    // HIGHLIGHT MARKER
+    // Highlight the selected marker
     function highlightMarker(marker, originalColor) {
-      // Reset previous
       if (highlighted) {
         highlighted.el.style.width = "12px";
         highlighted.el.style.height = "12px";
         highlighted.el.style.backgroundColor = highlighted.color;
         highlighted.el.style.border = "2px solid #333";
       }
-      // Highlight new
       const el = marker.getElement();
       el.style.width = "20px";
       el.style.height = "20px";
@@ -366,11 +420,13 @@
       highlighted = { marker, el, color: originalColor };
     }
 
-    // DETAILS PANE
+    // -------------------
+    // DETAILS PANE (RIGHT)
+    // -------------------
     const detailsPane = document.getElementById("details-pane");
     const detailsContent = document.getElementById("details-content");
 
-    // swipe detection
+    // Swipe detection for closing on mobile
     let startX = 0;
     detailsPane.addEventListener("touchstart", (e) => {
       startX = e.touches[0].clientX;
@@ -384,20 +440,20 @@
       }
     }, { passive: true });
 
-    // open/close
+    // Show/hide details pane
     function openDetailsPane(agencies) {
       detailsContent.innerHTML = buildAgencyHTML(agencies);
       detailsPane.classList.add("open");
     }
-
     function closeDetailsPane() {
       detailsPane.classList.remove("open");
     }
 
+    // Build the agency HTML (including the new 'Phone' field)
     function buildAgencyHTML(agencies) {
       if (!agencies.length) return "<p>No agency data.</p>";
 
-      // sort
+      // Sort the agencies by day, then meal
       const dayOrder = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
       agencies.sort((a,b) => {
         const d = dayOrder.indexOf(a["Day of the Week"]) - dayOrder.indexOf(b["Day of the Week"]);
@@ -409,8 +465,10 @@
       const agencyName = first["Agency"].split(":")[1]?.trim() || first["Agency"];
       const address1 = first["Address 1"] || "";
       const address4 = first["Address 4"] || "";
+      const phone = first["Phone"] || "";  // <--- new column
       const fullAddress = `${address1}, ${address4}${agencyName ? ", " + agencyName : ""}`.trim();
 
+      // Build table rows
       let rows = "";
       agencies.forEach((r) => {
         rows += `
@@ -428,6 +486,8 @@
         <div class="agency-name">${agencyName}</div>
         <div class="agency-address">${address1}</div>
         <div class="agency-address">${address4}</div>
+        <div class="agency-phone">${phone}</div>  <!-- Show Phone here -->
+
         <div class="button-container">
           <button id="directions-button" onclick="getDirections('${fullAddress}')">Get Directions</button>
         </div>
@@ -454,7 +514,39 @@
       window.open(url, "_blank");
     }
 
+    // -------------------
+    // FILTER OVERLAY (LEFT)
+    // -------------------
+    const filterPane = document.getElementById("filter-pane");
+
+    function openFilterPane() {
+      filterPane.classList.add("open");
+    }
+    function closeFilterPane() {
+      filterPane.classList.remove("open");
+    }
+
+    // Slide in/out from the left
+    let filterStartX = 0;
+    filterPane.addEventListener("touchstart", (e) => {
+      filterStartX = e.touches[0].clientX;
+    }, { passive: true });
+    filterPane.addEventListener("touchmove", (e) => {
+      const currentX = e.touches[0].clientX;
+      const diff = filterStartX - currentX; 
+      // if user swipes left > 50px, close
+      if (diff > 50) {
+        closeFilterPane();
+      }
+    }, { passive: true });
+
+    // FILTER BUTTON in top-left
+    const filterButton = document.getElementById("filter-button");
+    filterButton.addEventListener("click", openFilterPane);
+
+    // -------------------
     // FILTERS
+    // -------------------
     const zipInput = document.getElementById("zip-search");
     zipInput.addEventListener("input", () => applyFilters(zipInput.value));
 
@@ -469,7 +561,7 @@
       const selectedMeals = Array.from(document.querySelectorAll(".meal-filter:checked")).map((cb) => cb.value);
 
       filteredData = allData.filter((row) => {
-        const day = row["Day of the Week"];
+        const day = row["Day of the Week"] || "";
         const meal = row["Meal Type"] || "Pantry Bag Distribution";
         const zipVal = row["Address 4"] || "";
         const zipCheck = !zip || zipVal.includes(zip);
