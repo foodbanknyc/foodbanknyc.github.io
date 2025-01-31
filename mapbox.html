@@ -84,7 +84,7 @@
       z-index: 1100;
       background-color: #ffffff;
       color: #000000;
-      border:2px solid #333;
+      border: 2px solid #333;
       border-radius: 4px;
       padding: 8px 16px;
       cursor: pointer;
@@ -124,7 +124,7 @@
       color: #333;
     }
 
-    /* RIGHT DETAILS PANE (agency info only) */
+    /* RIGHT DETAILS PANE (Agency Info) */
     #details-pane {
       position: fixed; 
       top: 0; 
@@ -192,7 +192,7 @@
       justify-content: center; 
       margin: 12px 0; 
       padding-bottom: 25px;
-    }
+    }   
     #directions-button {
       padding: 8px 16px;
       font-size: 1em;
@@ -206,7 +206,7 @@
       background-color: #0056b3;
     }
 
-    /* For the filter inputs */
+    /* FILTERS */
     .filters { margin: 12px 0; }
     .filter-section { margin-bottom: 12px; }
     .search-input {
@@ -310,8 +310,11 @@
     // MAP SETUP
     // -------------------
     mapboxgl.accessToken = "pk.eyJ1IjoiYXJuYXZrcmlzaG5hIiwiYSI6ImNtNXlhc285dTBoNGwybnB4NDRyZ2phNXgifQ.Q1UhzlIAHhPma35DGkdEeg";
-    let allData = [], filteredData = [], markers = [], highlighted = null;
+    let allData = [], filteredData = [], markers = [];
+    // 'highlighted' holds the currently highlighted marker's info or null if none
+    let highlighted = null;
 
+    // Create the map
     const map = new mapboxgl.Map({
       container: "map",
       style: "mapbox://styles/mapbox/streets-v11",
@@ -319,7 +322,8 @@
       zoom: 12
     });
 
-    map.addControl(new mapboxgl.NavigationControl());
+    // Add Fullscreen button (fills browser window)
+    map.addControl(new mapboxgl.FullscreenControl());
 
     // Attempt geolocation
     if ("geolocation" in navigator) {
@@ -339,7 +343,7 @@
     }
 
     // Load CSV
-    const csvUrl = "https://fbnycpublic.blob.core.windows.net/mapdata/customsearch228637.csv?sv=2022-11-02&ss=bfqt&srt=sco&sp=rptfx&se=2050-01-18T03:56:20Z&st=2025-01-17T19:56:20Z&spr=https&sig=u41iVNckMwY%2Fkx76wPlA6CfSUzP9Ls4PUijuBfSsWAY%3D";
+    const csvUrl = "https://fbnycpublic.blob.core.windows.net/mapdata/customsearch_agency_map_data.csv?sv=2022-11-02&ss=bfqt&srt=sco&sp=rptfx&se=2050-01-18T03:56:20Z&st=2025-01-17T19:56:20Z&spr=https&sig=u41iVNckMwY%2Fkx76wPlA6CfSUzP9Ls4PUijuBfSsWAY%3D";
     Papa.parse(csvUrl, {
       download: true,
       header: true,
@@ -368,17 +372,20 @@
         const isMulti = (agencies.length > 1);
         const color = isMulti ? "#FFA500" : getMealColor(agencies[0]["Meal Type"]);
 
-        // Create marker
+        // Create marker element
         const el = document.createElement("div");
         el.className = "site-marker";
         el.style.backgroundColor = color;
 
+        // Build the mapbox marker
         const marker = new mapboxgl.Marker(el).setLngLat([lng, lat]).addTo(map);
+
+        // Store references
         markers.push({ marker, agencies, color, el });
 
+        // Marker click: highlight/unhighlight logic
         el.addEventListener("click", () => {
-          highlightMarker(marker, color);
-          openDetailsPane(agencies);
+          toggleMarker(marker, color, agencies);
         });
       }
     }
@@ -404,20 +411,40 @@
       return "#FFA500";
     }
 
-    // Highlight the selected marker
-    function highlightMarker(marker, originalColor) {
-      if (highlighted) {
-        highlighted.el.style.width = "12px";
-        highlighted.el.style.height = "12px";
-        highlighted.el.style.backgroundColor = highlighted.color;
-        highlighted.el.style.border = "2px solid #333";
+    // Toggle highlight. If user clicks the same marker, unhighlight
+    function toggleMarker(marker, originalColor, agencies) {
+      // If this marker is already highlighted, unselect
+      if (highlighted && highlighted.marker === marker) {
+        revertHighlight();     // restore old color
+        closeDetailsPane();    // hide the sidebar
+      } else {
+        // Otherwise highlight the new marker
+        revertHighlight();  // revert any existing highlight first
+        highlightMarker(marker, originalColor);
+        openDetailsPane(agencies);
       }
+    }
+
+    // Highlight a newly selected marker
+    function highlightMarker(marker, originalColor) {
       const el = marker.getElement();
       el.style.width = "20px";
       el.style.height = "20px";
       el.style.backgroundColor = "#FF3333";
       el.style.border = "2px solid #FFF";
+
+      // Store highlight info
       highlighted = { marker, el, color: originalColor };
+    }
+
+    // Revert highlight if any
+    function revertHighlight() {
+      if (!highlighted) return;
+      highlighted.el.style.width = "12px";
+      highlighted.el.style.height = "12px";
+      highlighted.el.style.backgroundColor = highlighted.color;
+      highlighted.el.style.border = "2px solid #333";
+      highlighted = null;
     }
 
     // -------------------
@@ -440,7 +467,6 @@
       }
     }, { passive: true });
 
-    // Show/hide details pane
     function openDetailsPane(agencies) {
       detailsContent.innerHTML = buildAgencyHTML(agencies);
       detailsPane.classList.add("open");
@@ -449,11 +475,11 @@
       detailsPane.classList.remove("open");
     }
 
-    // Build the agency HTML (including the new 'Phone' field)
+    // Build the agency HTML
     function buildAgencyHTML(agencies) {
       if (!agencies.length) return "<p>No agency data.</p>";
 
-      // Sort the agencies by day, then meal
+      // Sort by day, then meal
       const dayOrder = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
       agencies.sort((a,b) => {
         const d = dayOrder.indexOf(a["Day of the Week"]) - dayOrder.indexOf(b["Day of the Week"]);
@@ -465,10 +491,9 @@
       const agencyName = first["Agency"].split(":")[1]?.trim() || first["Agency"];
       const address1 = first["Address 1"] || "";
       const address4 = first["Address 4"] || "";
-      const phone = first["Phone"] || "";  // <--- new column
+      const phone = first["Phone"] || "";
       const fullAddress = `${address1}, ${address4}${agencyName ? ", " + agencyName : ""}`.trim();
 
-      // Build table rows
       let rows = "";
       agencies.forEach((r) => {
         rows += `
@@ -486,8 +511,7 @@
         <div class="agency-name">${agencyName}</div>
         <div class="agency-address">${address1}</div>
         <div class="agency-address">${address4}</div>
-        <div class="agency-phone">${phone}</div>  <!-- Show Phone here -->
-
+        <div class="agency-phone">${phone}</div>
         <div class="button-container">
           <button id="directions-button" onclick="getDirections('${fullAddress}')">Get Directions</button>
         </div>
@@ -501,32 +525,27 @@
               <th>Close</th>
             </tr>
           </thead>
-          <tbody>
-            ${rows}
-          </tbody>
+          <tbody>${rows}</tbody>
         </table>
       `;
     }
 
     function getDirections(addr) {
       const encoded = encodeURIComponent(addr);
-      const url = `https://www.google.com/maps/search/?api=1&query=${encoded}`;
-      window.open(url, "_blank");
+      window.open(`https://www.google.com/maps/search/?api=1&query=${encoded}`, "_blank");
     }
 
     // -------------------
     // FILTER OVERLAY (LEFT)
     // -------------------
     const filterPane = document.getElementById("filter-pane");
-
     function openFilterPane() {
       filterPane.classList.add("open");
     }
     function closeFilterPane() {
       filterPane.classList.remove("open");
     }
-
-    // Slide in/out from the left
+    // Slide in/out from the left (mobile swipe)
     let filterStartX = 0;
     filterPane.addEventListener("touchstart", (e) => {
       filterStartX = e.touches[0].clientX;
@@ -571,6 +590,9 @@
       });
 
       addMarkers(filteredData);
+
+      // If a marker was highlighted but is no longer in filtered data, you could revert highlight, etc.
+      // For simplicity, we won't handle that here.
     }
   </script>
 </body>
