@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Azure Blob CSV Dashboard</title>
+  <!-- Papa Parse -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.2.1/dist/chart.umd.min.js"></script>
+
+  <style>
+    /* Basic Page Styling */
+    body {
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      margin: 20px;
+      color: #333;
+      background-color: #ffffff;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 5px;
+      font-weight: 600;
+    }
+    #messages {
+      text-align: center;
+      margin-bottom: 20px;
+      font-style: italic;
+      color: #5d5c5c;
+    }
+
+    /* Card Container */
+    #cards-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      justify-content: center;
+      margin: 30px auto;
+      max-width: 800px;
+    }
+    /* Individual Card */
+    .card {
+      flex: 1 1 200px;
+      min-width: 100px;
+      max-width: 250px;
+      background-color: #ffffff;
+      border-radius: 1px;
+      border-style: groove;
+      padding: 5px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: default;
+    }
+    .card-title {
+      font-size: 0.9rem;
+      color: #555;
+      margin-bottom: 5px;
+      text-align: center;
+    }
+    .card-value {
+      font-size: 1.4rem;
+      font-weight: 600;
+      text-align: center;
+      color: #222;
+    }
+
+    /* Chart Container */
+    #chart-container {
+      max-width: 900px;
+      margin: 0 auto 30px auto;
+      background-color: #fff;
+      border-radius: 1px;
+      border-style: groove;
+      padding: 15px;
+    }
+
+    /* Tables Container */
+    #tables-container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 40px;
+      margin-top: 20px;
+      max-width: 1200px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .table-block {
+      background-color: #fff;
+      border-radius: 6px;
+      padding: 15px;
+    }
+    .table-title {
+      text-align: center;
+      margin-bottom: 6px;
+      font-weight: 600;
+      font-size: 1rem;
+      color: #444;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-bottom: 0;
+      font-size: 14px;
+    }
+    table thead {
+      background-color: #f4f4f4;
+    }
+    table th, table td {
+      border: 1px solid #ddd;
+      padding: 8px 12px;
+      text-align: left;
+    }
+    table th {
+      font-weight: 600;
+    }
+    table tfoot td {
+      font-weight: 600;
+    }
+    /* Agency table rows are clickable */
+    #agency-table tbody tr {
+      cursor: pointer;
+    }
+    /* Simple highlight on hover */
+    #agency-table tbody tr:hover {
+      background-color: #e7f1fa;
+    }
+    /* Selected row style (we'll toggle it in JS) */
+    .selected-row {
+      background-color: #cce4f7 !important;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Food Distribution Year to Date</h1>
+  <p id="messages">Loading data from CSV...</p>
+
+  <!-- Cards Row -->
+  <div id="cards-container">
+    <!-- We'll dynamically fill 6 cards here -->
+  </div>
+
+  <!-- Chart Container -->
+  <div id="chart-container">
+    <canvas id="myChart" width="400" height="200"></canvas>
+  </div>
+
+  <!-- Tables Container -->
+  <div id="tables-container">
+
+    <!-- Table 1: Month Totals -->
+    <div class="table-block">
+      <div class="table-title">Monthly Totals</div>
+      <table id="monthly-table"></table>
+    </div>
+
+    <!-- Table 2: Product Type Totals -->
+    <div class="table-block">
+      <div class="table-title">Category Totals</div>
+      <table id="category-table"></table>
+    </div>
+
+    <!-- Table 3: Agency Type Totals -->
+    <div class="table-block">
+      <div class="table-title">Agency Type Totals</div>
+      <table id="agency-table"></table>
+    </div>
+  </div>
+
+  <script>
+    // Store original data & chart instance globally so we can re-render
+    let originalData = [];
+    let currentAgencyFilter = null; // track which agency is selected (if any)
+    let myChart = null;            // chart instance
+
+    // Public or SAS-enabled CSV URL
+    const CSV_BLOB_URL = "https://fbnycpublic.blob.core.windows.net/mapdata/customsearch64472.csv?sv=2022-11-02&ss=bfqt&srt=sco&sp=rptfx&se=2050-01-18T03%3A56%3A20Z&st=2025-01-17T19%3A56%3A20Z&spr=https&sig=u41iVNckMwY%2Fkx76wPlA6CfSUzP9Ls4PUijuBfSsWAY%3D";
+
+    // -------------- Parse CSV and Initialize --------------
+    Papa.parse(CSV_BLOB_URL, {
+      download: true,
+      header: true,
+      skipEmptyLines: true,
+      complete: function(results) {
+        if (results.errors && results.errors.length > 0) {
+          document.getElementById('messages').textContent =
+            "Error parsing CSV: " + results.errors[0].message;
+          return;
+        }
+
+        originalData = results.data;
+        console.log("Parsed data sample:", originalData[0]); // Inspect a sample row
+
+        // Clear the loading message
+        document.getElementById('messages').textContent = "";
+
+        // Build the full dashboard with unfiltered data
+        buildDashboard(originalData);
+      },
+      error: function(err) {
+        document.getElementById('messages').textContent =
+          "Failed to fetch CSV: " + err;
+      }
+    });
+
+
+    // -------------- Build the Entire Dashboard --------------
+    function buildDashboard(data) {
+      // 1) Aggregate data
+      const {
+        monthlyTotals,
+        categoryTotals,
+        agencyTotals,
+        distinctAgencies,
+        distinctZips,
+        totalNetWeight,
+        totalFreshProduce,
+        totalCultural
+      } = aggregateData(data);
+
+      // 2) Chart data
+      const labels = Object.keys(monthlyTotals).sort();
+      const values = labels.map(m => monthlyTotals[m]);
+
+      // 3) Build tables
+      renderMonthlyTable(labels, values);
+      renderCategoryTable(categoryTotals);
+      renderAgencyTable(agencyTotals);
+
+      // 4) Render chart
+      renderChart(labels, values);
+
+      // 5) Build cards
+      const cardData = [
+        {
+          title: "Pounds Distributed",
+          value: totalNetWeight
+        },
+        {
+          title: "Meals Served",
+          value: totalNetWeight / 1.2
+        },
+        {
+          title: "Agencies Served",
+          value: distinctAgencies.size
+        },
+        {
+          title: "Pounds of Fresh Produce",
+          value: totalFreshProduce
+        },
+        {
+          title: "Zip Codes Reached",
+          value: distinctZips.size
+        },
+        {
+          title: "Pounds of Culturally Relevant Food",
+          value: totalCultural
+        }
+      ];
+      renderCards(cardData);
+    }
+
+
+    // -------------- Aggregation Logic --------------
+    function aggregateData(data) {
+      const monthlyTotals = {};
+      const categoryTotals = {};
+      const agencyTotals = {};
+
+      const distinctAgencies = new Set();
+      const distinctZips = new Set();
+
+      let totalNetWeight = 0;
+      let totalFreshProduce = 0;
+      let totalCultural = 0;
+
+      data.forEach(row => {
+        const dateStr = row["Month"];
+        const netWeightStr = row["Sum of Net Weight"];
+        const category = row["Product Type"];
+        const dietary = (row["DIETARY OPTIONS"] || "").toLowerCase();
+        const zip = row["Shipping Zip"];
+        const agencyId = row["ID"];
+        const agencyType = row["Agency Type"];
+
+        if (!netWeightStr) return;
+        const netWeight = parseFloat(netWeightStr) || 0;
+
+        // Distinct
+        if (agencyId) distinctAgencies.add(agencyId);
+        if (zip) distinctZips.add(zip);
+
+        // Summation
+        totalNetWeight += netWeight;
+
+        // Fresh produce
+        if (category === "Fresh Produce") {
+          totalFreshProduce += netWeight;
+        }
+
+        // Cultural
+        if (dietary.includes("halal") || dietary.includes("kosher")) {
+          totalCultural += netWeight;
+        }
+
+        // Monthly Totals
+        if (dateStr) {
+          const [yearStr, monthStr] = dateStr.split("-");
+          const year = parseInt(yearStr, 10);
+          const monthNum = parseInt(monthStr, 10);
+          if (year && monthNum) {
+            const monthKey = `${year}-${String(monthNum).padStart(2, '0')}`;
+            monthlyTotals[monthKey] = (monthlyTotals[monthKey] || 0) + netWeight;
+          }
+        }
+
+        // Category Totals
+        if (category) {
+          categoryTotals[category] = (categoryTotals[category] || 0) + netWeight;
+        }
+
+        // Agency Type Totals
+        if (agencyType) {
+          agencyTotals[agencyType] = (agencyTotals[agencyType] || 0) + netWeight;
+        }
+      });
+
+      return {
+        monthlyTotals,
+        categoryTotals,
+        agencyTotals,
+        distinctAgencies,
+        distinctZips,
+        totalNetWeight,
+        totalFreshProduce,
+        totalCultural
+      };
+    }
+
+
+    // -------------- Chart Rendering --------------
+    function renderChart(labels, values) {
+      const ctx = document.getElementById('myChart').getContext('2d');
+
+      // If there's an existing chart, destroy it to re-render cleanly
+      if (myChart) {
+        myChart.destroy();
+      }
+
+      myChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Sum of Net Weight',
+            data: values,
+            backgroundColor: 'rgba(54, 162, 235, 0.6)',
+            borderColor: 'rgba(54, 162, 235, 1)',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: 'Pounds'
+              },
+              ticks: {
+                // Round the axis labels to whole numbers
+                callback: function(value) {
+                  return Math.round(value).toLocaleString();
+                }
+              }
+            },
+            x: {
+              title: {
+                display: true,
+                text: 'Month (YYYY-MM)'
+              }
+            }
+          },
+          plugins: {
+            tooltip: {
+              callbacks: {
+                // Format the tooltip label
+                label: function (context) {
+                  const label = context.dataset.label || '';
+                  let value = context.parsed.y;
+                  value = Math.round(value); // Round
+                  return `${label}: ${value.toLocaleString()}`;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+
+    // -------------- Card Rendering --------------
+    function renderCards(cardData) {
+      const container = document.getElementById("cards-container");
+      let html = "";
+      cardData.forEach(card => {
+        const roundedValue = Math.round(card.value).toLocaleString();
+        html += `
+          <div class="card">
+            <div class="card-title">${card.title}</div>
+            <div class="card-value">${roundedValue}</div>
+          </div>
+        `;
+      });
+      container.innerHTML = html;
+    }
+
+
+    // -------------- Table 1: Monthly Totals --------------
+    function renderMonthlyTable(labels, values) {
+      const monthlyTable = document.getElementById("monthly-table");
+
+      const ytdTotal = values.reduce((acc, val) => acc + val, 0);
+      const ytdRounded = Math.round(ytdTotal).toLocaleString();
+
+      let html = `
+        <thead>
+          <tr>
+            <th>Month</th>
+            <th>Pounds</th>
+          </tr>
+        </thead>
+        <tbody>
+      `;
+
+      for (let i = 0; i < labels.length; i++) {
+        const month = labels[i];
+        const pounds = Math.round(values[i]).toLocaleString();
+        html += `
+          <tr>
+            <td>${month}</td>
+            <td>${pounds}</td>
+          </tr>
+        `;
+      }
+
+      html += `
+        <tr style="font-weight: bold;">
+          <td>YTD Total</td>
+          <td>${ytdRounded}</td>
+        </tr>
+      `;
+
+      html += `</tbody>`;
+      monthlyTable.innerHTML = html;
+    }
+
+
+    // -------------- Table 2: Product Type Totals --------------
+    function renderCategoryTable(categoryTotals) {
+      const categoryTable = document.getElementById("category-table");
+
+      const entries = Object.entries(categoryTotals);
+      entries.sort((a, b) => b[1] - a[1]);
+
+      const grandTotal = entries.reduce((acc, item) => acc + item[1], 0);
+
+      let html = `
+        <thead>
+          <tr>
+            <th>Product Type</th>
+            <th>Pounds</th>
+            <th>% of Total</th>
+          </tr>
+        </thead>
+        <tbody>
+      `;
+
+      for (const [category, rawPounds] of entries) {
+        const pounds = Math.round(rawPounds);
+        const pct = grandTotal === 0 ? 0 : (pounds / grandTotal * 100).toFixed(1);
+        html += `
+          <tr>
+            <td>${category}</td>
+            <td>${pounds.toLocaleString()}</td>
+            <td>${pct}%</td>
+          </tr>
+        `;
+      }
+
+      html += `</tbody>`;
+      categoryTable.innerHTML = html;
+    }
+
+
+    // -------------- Table 3: Agency Type Totals (Clickable) --------------
+    function renderAgencyTable(agencyTotals) {
+      const agencyTable = document.getElementById("agency-table");
+
+      const entries = Object.entries(agencyTotals);
+      entries.sort((a, b) => b[1] - a[1]);
+
+      const grandTotal = entries.reduce((acc, item) => acc + item[1], 0);
+
+      let html = `
+        <thead>
+          <tr>
+            <th>Agency Type</th>
+            <th>Pounds</th>
+            <th>% of Total</th>
+          </tr>
+        </thead>
+        <tbody>
+      `;
+
+      for (const [agencyType, rawPounds] of entries) {
+        const pounds = Math.round(rawPounds);
+        const pct = grandTotal === 0 ? 0 : (pounds / grandTotal * 100).toFixed(1);
+
+        // data-agencytype used for easy retrieval on click
+        html += `
+          <tr data-agencytype="${agencyType}">
+            <td>${agencyType}</td>
+            <td>${pounds.toLocaleString()}</td>
+            <td>${pct}%</td>
+          </tr>
+        `;
+      }
+
+      html += `</tbody>`;
+      agencyTable.innerHTML = html;
+
+      // Add click event listeners for "powerbi-like" filtering
+      addAgencyTableClickHandlers();
+    }
+
+
+    // -------------- Interactive Filtering --------------
+    function addAgencyTableClickHandlers() {
+      const agencyTable = document.getElementById("agency-table");
+      const rows = agencyTable.querySelectorAll("tbody tr");
+
+      rows.forEach(row => {
+        row.addEventListener("click", () => {
+          const selectedAgency = row.getAttribute("data-agencytype");
+
+          // If user clicks same row again, clear filter
+          if (selectedAgency === currentAgencyFilter) {
+            currentAgencyFilter = null;
+            removeRowHighlight();
+            buildDashboard(originalData);
+          } else {
+            // highlight this row, unhighlight others
+            removeRowHighlight();
+            row.classList.add("selected-row");
+            currentAgencyFilter = selectedAgency;
+            // Filter the data
+            const filtered = originalData.filter(
+              r => r["Agency Type"] === selectedAgency
+            );
+            buildDashboard(filtered);
+          }
+        });
+      });
+    }
+
+    function removeRowHighlight() {
+      const agencyTable = document.getElementById("agency-table");
+      const rows = agencyTable.querySelectorAll("tbody tr");
+      rows.forEach(r => r.classList.remove("selected-row"));
+    }
+  </script>
+</body>
+</html>
