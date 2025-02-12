@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Azure Blob CSV Dashboard</title>
+  <title>Food Distribution Dashboard</title>
+  <link rel="icon" href="analytics.png" type="image/x-icon">
   <!-- Papa Parse -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
   <!-- Chart.js -->
@@ -12,14 +13,48 @@
     /* Basic Page Styling */
     body {
       font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-      margin: 20px;
+      margin: 0px;
       color: #333;
       background-color: #ffffff;
     }
+
+    .orange-bar {
+      background-color: rgb(219, 139, 0);
+      height: 5px;
+      width: 100%;
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 1000;
+  }
+
+  #header1 {
+      font-family: Arial, sans-serif;
+      margin-left: 28px;
+      padding-top: 12px;
+      font-size: 32px;
+      font-style: italic;
+      font-weight: bold;
+      color: rgb(219, 139, 0);
+  }
+
+  #header2 {
+      font-family: Arial, sans-serif;
+      padding: 0;
+      margin-top: -14px;
+      margin-left: 67px;
+      margin-bottom: 0px;
+      font-size: 28px;
+      font-style: italic;
+      font-weight: bolder;
+      color: rgb(219, 139, 0);
+  }
     h1 {
       text-align: center;
-      margin-bottom: 5px;
-      font-weight: 600;
+      margin-top: -28px ;
+      margin-bottom: 1 px;
+      font-weight: 520;
+      font-family: Arial, sans-serif;
     }
     #messages {
       text-align: center;
@@ -105,10 +140,10 @@
       font-size: 14px;
     }
     table thead {
-      background-color: #f4f4f4;
+      background-color: #ffffff;
     }
     table th, table td {
-      border: 1px solid #ddd;
+      border: 1px solid #000000;
       padding: 8px 12px;
       text-align: left;
     }
@@ -132,9 +167,11 @@
     }
   </style>
 </head>
-
 <body>
-  <h1>Food Distribution Year to Date</h1>
+  <div class="orange-bar"></div>
+  <div id="header1">FBNYC</div>
+  <div id="header2">Data</div>
+  <h1>Food Distribution YTD</h1>
   <p id="messages">Loading data from CSV...</p>
 
   <!-- Cards Row -->
@@ -147,14 +184,33 @@
     <canvas id="myChart" width="400" height="200"></canvas>
   </div>
 
-  <!-- Tables Container -->
+  <!-- Tables Container (now includes all 5 tables) -->
   <div id="tables-container">
 
+        <!-- Table 3: Agency Type Totals -->
+        <div class="table-block">
+          <div class="table-title">Agency Type Totals</div>
+          <table id="agency-table"></table>
+        </div>
+        
     <!-- Table 1: Month Totals -->
     <div class="table-block">
       <div class="table-title">Monthly Totals</div>
       <table id="monthly-table"></table>
     </div>
+
+        <!-- Table 4: County Totals -->
+        <div class="table-block">
+          <div class="table-title">County Totals</div>
+          <table id="county-table"></table>
+        </div>
+
+        <!-- Table 5: Kosher / Halal Totals -->
+        <div class="table-block">
+          <div class="table-title">Culturally Relevant Totals</div>
+          <table id="kosher-halal-table"></table>
+        </div>
+
 
     <!-- Table 2: Product Type Totals -->
     <div class="table-block">
@@ -162,11 +218,6 @@
       <table id="category-table"></table>
     </div>
 
-    <!-- Table 3: Agency Type Totals -->
-    <div class="table-block">
-      <div class="table-title">Agency Type Totals</div>
-      <table id="agency-table"></table>
-    </div>
   </div>
 
   <script>
@@ -213,6 +264,8 @@
         monthlyTotals,
         categoryTotals,
         agencyTotals,
+        countyTotals,
+        kosherHalalTotals,
         distinctAgencies,
         distinctZips,
         totalNetWeight,
@@ -224,10 +277,12 @@
       const labels = Object.keys(monthlyTotals).sort();
       const values = labels.map(m => monthlyTotals[m]);
 
-      // 3) Build tables
+      // 3) Build main tables
       renderMonthlyTable(labels, values);
       renderCategoryTable(categoryTotals);
       renderAgencyTable(agencyTotals);
+      renderCountyTable(countyTotals);
+      renderKosherHalalTable(kosherHalalTotals);
 
       // 4) Render chart
       renderChart(labels, values);
@@ -268,6 +323,11 @@
       const monthlyTotals = {};
       const categoryTotals = {};
       const agencyTotals = {};
+      const countyTotals = {};
+      const kosherHalalTotals = {
+        Kosher: 0,
+        Halal: 0
+      };
 
       const distinctAgencies = new Set();
       const distinctZips = new Set();
@@ -284,6 +344,7 @@
         const zip = row["Shipping Zip"];
         const agencyId = row["ID"];
         const agencyType = row["Agency Type"];
+        const county = row["County"];
 
         if (!netWeightStr) return;
         const netWeight = parseFloat(netWeightStr) || 0;
@@ -325,12 +386,27 @@
         if (agencyType) {
           agencyTotals[agencyType] = (agencyTotals[agencyType] || 0) + netWeight;
         }
+
+        // County Totals
+        if (county) {
+          countyTotals[county] = (countyTotals[county] || 0) + netWeight;
+        }
+
+        // Kosher/Halal Totals
+        if (dietary.includes("kosher")) {
+          kosherHalalTotals.Kosher += netWeight;
+        }
+        if (dietary.includes("halal")) {
+          kosherHalalTotals.Halal += netWeight;
+        }
       });
 
       return {
         monthlyTotals,
         categoryTotals,
         agencyTotals,
+        countyTotals,
+        kosherHalalTotals,
         distinctAgencies,
         distinctZips,
         totalNetWeight,
@@ -348,17 +424,22 @@
       if (myChart) {
         myChart.destroy();
       }
-
+  
+      if (myChart) {
+        myChart.destroy();
+      }
+      
       myChart = new Chart(ctx, {
         type: 'bar',
         data: {
           labels: labels,
           datasets: [{
-            label: 'Sum of Net Weight',
+            label: 'Monthly Pounds',
             data: values,
-            backgroundColor: 'rgba(54, 162, 235, 0.6)',
-            borderColor: 'rgba(54, 162, 235, 1)',
-            borderWidth: 1
+            backgroundColor: 'rgba(219,139,0,1)',
+            borderColor: 'rgb(51,51,51,1)',
+            borderWidth: 2,
+            size: 20
           }]
         },
         options: {
@@ -368,31 +449,50 @@
               beginAtZero: true,
               title: {
                 display: true,
-                text: 'Pounds'
-              },
-              ticks: {
-                // Round the axis labels to whole numbers
-                callback: function(value) {
-                  return Math.round(value).toLocaleString();
-                }
+                text: 'Pounds',
+                font: {
+                  family: 'Helvetica, sans-serif', // Font family
+                  size: 20,                    // Font size in px
+               // Font weight (e.g., 'bold', 600, etc.)
+                },
               }
             },
             x: {
               title: {
                 display: true,
-                text: 'Month (YYYY-MM)'
+                text: 'Month',
+                font: {
+                  family: 'Helvetica, sans-serif', // Font family
+                  size: 20,                    // Font size in px
+               // Font weight (e.g., 'bold', 600, etc.)
+                },
               }
             }
           },
           plugins: {
+            legend: {
+              display: false
+            },
+            title: {
+              display: true,
+              text: ' ',
+              color: '#33333', // Title text color
+              font: {
+                family: 'Helvetica, sans-serif', // Font family
+                size: 22,                    // Font size in px
+             // Font weight (e.g., 'bold', 600, etc.)
+              },
+              padding: {
+                top: 10,
+                bottom: 10
+              }
+            },
+
             tooltip: {
               callbacks: {
-                // Format the tooltip label
-                label: function (context) {
-                  const label = context.dataset.label || '';
-                  let value = context.parsed.y;
-                  value = Math.round(value); // Round
-                  return `${label}: ${value.toLocaleString()}`;
+                label: function(context) {
+                  const val = Math.round(context.parsed.y);
+                  return context.dataset.label + ': ' + val.toLocaleString();
                 }
               }
             }
@@ -538,7 +638,79 @@
     }
 
 
-    // -------------- Interactive Filtering --------------
+    // -------------- Table 4: County Totals --------------
+    function renderCountyTable(countyTotals) {
+      const countyTable = document.getElementById("county-table");
+
+      const entries = Object.entries(countyTotals);
+      // Sort descending by pounds
+      entries.sort((a, b) => b[1] - a[1]);
+
+      const total = entries.reduce((acc, item) => acc + item[1], 0);
+
+      let html = `
+        <thead>
+          <tr>
+            <th>County</th>
+            <th>Pounds</th>
+            <th>% of Total</th>
+          </tr>
+        </thead>
+        <tbody>
+      `;
+
+      for (const [county, rawPounds] of entries) {
+        const pounds = Math.round(rawPounds);
+        const pct = total === 0 ? 0 : (pounds / total * 100).toFixed(1);
+        html += `
+          <tr>
+            <td>${county}</td>
+            <td>${pounds.toLocaleString()}</td>
+            <td>${pct}%</td>
+          </tr>
+        `;
+      }
+
+      html += `</tbody>`;
+      countyTable.innerHTML = html;
+    }
+
+
+    // -------------- Table 5: Kosher / Halal Totals --------------
+    function renderKosherHalalTable(kosherHalalTotals) {
+      const table = document.getElementById("kosher-halal-table");
+
+      // We'll treat them like "entries" => [ ["Kosher", 5000], ["Halal", 3000] ]
+      const entries = Object.entries(kosherHalalTotals);
+      // Sort descending
+      entries.sort((a, b) => b[1] - a[1]);
+
+      let html = `
+        <thead>
+          <tr>
+            <th>Kosher / Halal</th>
+            <th>Pounds</th>
+          </tr>
+        </thead>
+        <tbody>
+      `;
+
+      for (const [dietaryType, rawPounds] of entries) {
+        const pounds = Math.round(rawPounds).toLocaleString();
+        html += `
+          <tr>
+            <td>${dietaryType}</td>
+            <td>${pounds}</td>
+          </tr>
+        `;
+      }
+
+      html += `</tbody>`;
+      table.innerHTML = html;
+    }
+
+
+    // -------------- Interactive Filtering (Agency Table) --------------
     function addAgencyTableClickHandlers() {
       const agencyTable = document.getElementById("agency-table");
       const rows = agencyTable.querySelectorAll("tbody tr");
