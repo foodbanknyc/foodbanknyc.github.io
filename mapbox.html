@@ -218,7 +218,7 @@
       box-sizing: border-box;
     }
 
-    /* SITE MARKERS: Increase default size for easier clicking on desktop */
+    /* SITE MARKERS */
     .site-marker {
       width: 16px; 
       height: 16px;
@@ -226,7 +226,6 @@
       border-radius: 50%;
       cursor: pointer;
     }
-    /* Slightly larger on mobile if you want, or revert to smaller if needed. */
     @media (max-width: 900px) {
       .site-marker {
         width: 18px !important;
@@ -295,6 +294,17 @@
           placeholder="Enter ZIP"
         />
       </div>
+
+      <!-- NEW Agency Name Search -->
+      <div class="filter-section">
+        <strong>Search by Agency Name:</strong><br />
+        <input
+          type="text"
+          id="agency-search"
+          class="search-input"
+          placeholder="Enter Agency Name"
+        />
+      </div>
     </div>
   </div>
 
@@ -307,17 +317,13 @@
   </div>
 
   <script>
-    // -------------------
-    // MAP SETUP
-    // -------------------
-    // Default Mapbox token is OK for demos/small usage, but recommended to use your own in production
+    // Mapbox token (OK for demos/small usage)
     mapboxgl.accessToken = "pk.eyJ1IjoiYXJuYXZrcmlzaG5hIiwiYSI6ImNtNXlhc285dTBoNGwybnB4NDRyZ2phNXgifQ.Q1UhzlIAHhPma35DGkdEeg";
 
     let allData = [], filteredData = [], markers = [];
-    // 'highlighted' holds the currently highlighted marker's info or null if none
     let highlighted = null;
 
-    // Create the map
+    // Create map
     const map = new mapboxgl.Map({
       container: "map",
       style: "mapbox://styles/mapbox/streets-v11",
@@ -325,7 +331,7 @@
       zoom: 12
     });
 
-    // Add Fullscreen button (fills browser window)
+    // Add Fullscreen button
     map.addControl(new mapboxgl.FullscreenControl());
 
     // Attempt geolocation
@@ -357,11 +363,9 @@
       }
     });
 
-    // -------------------
-    // MARKERS
-    // -------------------
+    // Marker creation
     function addMarkers(data) {
-      // Remove old markers
+      // remove old
       markers.forEach((m) => m.marker.remove());
       markers = [];
 
@@ -380,13 +384,12 @@
         el.className = "site-marker";
         el.style.backgroundColor = color;
 
-        // Build the mapbox marker
+        // Build mapbox marker
         const marker = new mapboxgl.Marker(el).setLngLat([lng, lat]).addTo(map);
 
-        // Store references
+        // store references
         markers.push({ marker, agencies, color, el });
 
-        // Marker click: highlight/unhighlight logic
         el.addEventListener("click", () => {
           toggleMarker(marker, color, agencies);
         });
@@ -414,50 +417,40 @@
       return "#FFA500";
     }
 
-    // Toggle highlight. If user clicks the same marker, unhighlight
+    // toggle highlight
     function toggleMarker(marker, originalColor, agencies) {
-      // If this marker is already highlighted, unselect
       if (highlighted && highlighted.marker === marker) {
-        revertHighlight();     // restore old color
-        closeDetailsPane();    // hide the sidebar
+        revertHighlight();
+        closeDetailsPane();
       } else {
-        // Otherwise highlight the new marker
-        revertHighlight();  // revert any existing highlight first
+        revertHighlight();
         highlightMarker(marker, originalColor);
         openDetailsPane(agencies);
       }
     }
 
-    // Highlight a newly selected marker
     function highlightMarker(marker, originalColor) {
       const el = marker.getElement();
-      // Make the marker bigger + red
       el.style.width = "24px";
       el.style.height = "24px";
       el.style.backgroundColor = "#FF3333";
       el.style.border = "2px solid #FFF";
-
-      // Store highlight info
       highlighted = { marker, el, color: originalColor };
     }
 
-    // Revert highlight if any
     function revertHighlight() {
       if (!highlighted) return;
-      highlighted.el.style.width = "16px";  // same as .site-marker
-      highlighted.el.style.height = "16px"; // same as .site-marker
+      highlighted.el.style.width = "16px";
+      highlighted.el.style.height = "16px";
       highlighted.el.style.backgroundColor = highlighted.color;
       highlighted.el.style.border = "2px solid #333";
       highlighted = null;
     }
 
-    // -------------------
-    // DETAILS PANE (RIGHT)
-    // -------------------
+    // DETAILS PANE
     const detailsPane = document.getElementById("details-pane");
     const detailsContent = document.getElementById("details-content");
 
-    // Swipe detection for closing on mobile
     let startX = 0;
     detailsPane.addEventListener("touchstart", (e) => {
       startX = e.touches[0].clientX;
@@ -479,11 +472,10 @@
       detailsPane.classList.remove("open");
     }
 
-    // Build the agency HTML
     function buildAgencyHTML(agencies) {
       if (!agencies.length) return "<p>No agency data.</p>";
 
-      // Sort by day, then meal
+      // Sort day->meal
       const dayOrder = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
       agencies.sort((a,b) => {
         const d = dayOrder.indexOf(a["Day of the Week"]) - dayOrder.indexOf(b["Day of the Week"]);
@@ -539,10 +531,10 @@
       window.open(`https://www.google.com/maps/search/?api=1&query=${encoded}`, "_blank");
     }
 
-    // -------------------
-    // FILTER OVERLAY (LEFT)
-    // -------------------
+    // FILTERS
     const filterPane = document.getElementById("filter-pane");
+    const filterButton = document.getElementById("filter-button");
+    filterButton.addEventListener("click", openFilterPane);
     function openFilterPane() {
       filterPane.classList.add("open");
     }
@@ -550,51 +542,67 @@
       filterPane.classList.remove("open");
     }
 
-    // Slide in/out from the left (mobile swipe)
     let filterStartX = 0;
     filterPane.addEventListener("touchstart", (e) => {
       filterStartX = e.touches[0].clientX;
     }, { passive: true });
     filterPane.addEventListener("touchmove", (e) => {
       const currentX = e.touches[0].clientX;
-      const diff = filterStartX - currentX; 
-      // if user swipes left > 50px, close
+      const diff = filterStartX - currentX;
       if (diff > 50) {
         closeFilterPane();
       }
     }, { passive: true });
 
-    // FILTER BUTTON in top-left
-    const filterButton = document.getElementById("filter-button");
-    filterButton.addEventListener("click", openFilterPane);
-
-    // -------------------
-    // FILTERS
-    // -------------------
+    // Additional filter inputs
     const zipInput = document.getElementById("zip-search");
-    zipInput.addEventListener("input", () => applyFilters(zipInput.value));
+    zipInput.addEventListener("input", () => applyFilters());
 
+    const agencyInput = document.getElementById("agency-search");
+    agencyInput.addEventListener("input", () => applyFilters());
+
+    // Checkboxes for day/meal
     document.querySelectorAll(".day-filter, .meal-filter").forEach((cb) => {
       cb.addEventListener("change", () => {
-        applyFilters(zipInput.value);
+        applyFilters();
       });
     });
 
-    function applyFilters(zip) {
+    function applyFilters() {
+      const zipVal = zipInput.value.trim();
+      const agencyVal = agencyInput.value.trim().toLowerCase(); // case-insensitive
+
       const selectedDays = Array.from(document.querySelectorAll(".day-filter:checked")).map((cb) => cb.value);
       const selectedMeals = Array.from(document.querySelectorAll(".meal-filter:checked")).map((cb) => cb.value);
 
       filteredData = allData.filter((row) => {
-        const day = row["Day of the Week"] || "";
+        const day = (row["Day of the Week"] || "").trim();
         const meal = row["Meal Type"] || "Pantry Bag Distribution";
-        const zipVal = row["Address 4"] || "";
-        const zipCheck = !zip || zipVal.includes(zip);
+        const zipField = (row["Address 4"] || "").trim();
+        
+        // Some Agency fields might have a "key: value" format
+        // or we just do row["Agency"]. toLowerCase
+        let agencyField = (row["Agency"] || "").toLowerCase();
+
+        // ZIP filter
+        const zipCheck = !zipVal || zipField.includes(zipVal);
+
+        // Day filter
         const dayCheck = (selectedDays.length === 0) || selectedDays.includes(day);
+
+        // Meal filter
         const mealCheck = (selectedMeals.length === 0) || selectedMeals.includes(meal);
-        return zipCheck && dayCheck && mealCheck;
+
+        // Agency name filter (case-insensitive substring match)
+        const agencyCheck = !agencyVal || agencyField.includes(agencyVal);
+
+        return zipCheck && dayCheck && mealCheck && agencyCheck;
       });
 
       addMarkers(filteredData);
+
+      // If a marker was highlighted but is no longer in filtered data, you can revert highlight
+      // For simplicity, we won't handle that here.
     }
   </script>
 </body>
