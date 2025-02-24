@@ -295,7 +295,7 @@
         />
       </div>
 
-      <!-- NEW Agency Name Search -->
+      <!-- Agency Name Search -->
       <div class="filter-section">
         <strong>Search by Agency Name:</strong><br />
         <input
@@ -363,9 +363,11 @@
       }
     });
 
-    // Marker creation
+    // -------------
+    // MARKERS
+    // -------------
     function addMarkers(data) {
-      // remove old
+      // remove old markers
       markers.forEach((m) => m.marker.remove());
       markers = [];
 
@@ -375,19 +377,17 @@
         const [lat, lng] = key.split(",").map(parseFloat);
         if (isNaN(lat) || isNaN(lng)) continue;
 
-        // If multiple agencies, color is orange. Otherwise color by meal type
-        const isMulti = (agencies.length > 1);
-        const color = isMulti ? "#FFA500" : getMealColor(agencies[0]["Meal Type"]);
+        // Determine color based on whether there's more than one unique Meal Type
+        const color = getColorForGroup(agencies);
 
         // Create marker element
         const el = document.createElement("div");
         el.className = "site-marker";
         el.style.backgroundColor = color;
 
-        // Build mapbox marker
+        // Add to map
         const marker = new mapboxgl.Marker(el).setLngLat([lng, lat]).addTo(map);
 
-        // store references
         markers.push({ marker, agencies, color, el });
 
         el.addEventListener("click", () => {
@@ -408,16 +408,32 @@
       return obj;
     }
 
+    // If multiple distinct meal types => #FFA500 (Multi-Service), else color by the single meal type
+    function getColorForGroup(agencies) {
+      const mealTypes = new Set();
+      agencies.forEach((a) => {
+        const mt = (a["Meal Type"] || "Pantry Bag Distribution").toLowerCase();
+        mealTypes.add(mt);
+      });
+      if (mealTypes.size > 1) {
+        return "#FFA500"; // Multi-Service
+      } else {
+        // Only one meal type in this group
+        return getMealColor(agencies[0]["Meal Type"]);
+      }
+    }
+
+    // Color by single meal type
     function getMealColor(mealType) {
       const t = (mealType || "").toLowerCase();
       if (t.includes("pantry bag distribution")) return "#8A2BE2";
       if (t.includes("breakfast")) return "#c04343";
       if (t.includes("lunch")) return "#3CB371";
       if (t.includes("dinner")) return "#4682B4";
-      return "#FFA500";
+      return "#FFA500"; // fallback
     }
 
-    // toggle highlight
+    // Toggle highlight
     function toggleMarker(marker, originalColor, agencies) {
       if (highlighted && highlighted.marker === marker) {
         revertHighlight();
@@ -447,7 +463,9 @@
       highlighted = null;
     }
 
+    // -------------
     // DETAILS PANE
+    // -------------
     const detailsPane = document.getElementById("details-pane");
     const detailsContent = document.getElementById("details-content");
 
@@ -531,7 +549,9 @@
       window.open(`https://www.google.com/maps/search/?api=1&query=${encoded}`, "_blank");
     }
 
+    // -------------
     // FILTERS
+    // -------------
     const filterPane = document.getElementById("filter-pane");
     const filterButton = document.getElementById("filter-button");
     filterButton.addEventListener("click", openFilterPane);
@@ -554,23 +574,20 @@
       }
     }, { passive: true });
 
-    // Additional filter inputs
     const zipInput = document.getElementById("zip-search");
     zipInput.addEventListener("input", () => applyFilters());
 
     const agencyInput = document.getElementById("agency-search");
     agencyInput.addEventListener("input", () => applyFilters());
 
-    // Checkboxes for day/meal
+    // day, meal checkboxes
     document.querySelectorAll(".day-filter, .meal-filter").forEach((cb) => {
-      cb.addEventListener("change", () => {
-        applyFilters();
-      });
+      cb.addEventListener("change", () => applyFilters());
     });
 
     function applyFilters() {
       const zipVal = zipInput.value.trim();
-      const agencyVal = agencyInput.value.trim().toLowerCase(); // case-insensitive
+      const agencyVal = agencyInput.value.trim().toLowerCase();
 
       const selectedDays = Array.from(document.querySelectorAll(".day-filter:checked")).map((cb) => cb.value);
       const selectedMeals = Array.from(document.querySelectorAll(".meal-filter:checked")).map((cb) => cb.value);
@@ -579,30 +596,17 @@
         const day = (row["Day of the Week"] || "").trim();
         const meal = row["Meal Type"] || "Pantry Bag Distribution";
         const zipField = (row["Address 4"] || "").trim();
-        
-        // Some Agency fields might have a "key: value" format
-        // or we just do row["Agency"]. toLowerCase
         let agencyField = (row["Agency"] || "").toLowerCase();
 
-        // ZIP filter
         const zipCheck = !zipVal || zipField.includes(zipVal);
-
-        // Day filter
         const dayCheck = (selectedDays.length === 0) || selectedDays.includes(day);
-
-        // Meal filter
         const mealCheck = (selectedMeals.length === 0) || selectedMeals.includes(meal);
-
-        // Agency name filter (case-insensitive substring match)
         const agencyCheck = !agencyVal || agencyField.includes(agencyVal);
 
         return zipCheck && dayCheck && mealCheck && agencyCheck;
       });
 
       addMarkers(filteredData);
-
-      // If a marker was highlighted but is no longer in filtered data, you can revert highlight
-      // For simplicity, we won't handle that here.
     }
   </script>
 </body>
