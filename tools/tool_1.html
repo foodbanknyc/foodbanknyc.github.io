@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Web Tools</title>
+  <link rel="stylesheet" type="text/css" href="tool_style.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+  <script defer src="tools.js"></script>
+</head>
+<body>
+  <!-- Header Section -->
+  <div class="header-container">
+    <div class="orange-bar"></div>
+    <div class="header-content">
+      <div id="header1">FBNYC</div>
+      <div id="header2">Data Tools</div>
+    </div>
+  </div>
+
+  <!-- Body Section -->
+  <div class="body-container">
+    <h1>Donation Product Calculator</h1>
+
+    <p>Want to see how many meals a donation of X will provide?</p>
+    <p><strong>Calculate Donation Impact</strong></p>
+  <label for="donationAmount">Enter donation amount ($):</label>
+  <input type="number" id="donationAmount" placeholder="0.00" step="0.01">
+    <br>
+    <label for="categoryFilter">Choose an Type of Product</label>
+    <select id="categoryFilter">
+      <option value="">All Categories</option>
+    </select>
+    <br>
+
+  
+    <p><strong>Average Cost (2024): </strong><span id="selectedCategory">All Categories</span></p>
+    <p id="total"></p>
+
+    <button id="calculateDonation">Calculate Meals</button>
+    <button id="resetButton">Reset</button>
+
+
+    <p id="result"></p>
+
+    <table id="categoryTable"></table>
+  </div>
+</body>
+</html>
