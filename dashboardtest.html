@@ -26,9 +26,9 @@
       top: 0;
       left: 0;
       z-index: 1000;
-  }
+    }
 
-  #header1 {
+    #header1 {
       font-family: Arial, sans-serif;
       margin-left: 28px;
       padding-top: 12px;
@@ -36,9 +36,9 @@
       font-style: italic;
       font-weight: bold;
       color: rgb(219, 139, 0);
-  }
+    }
 
-  #header2 {
+    #header2 {
       font-family: Arial, sans-serif;
       padding: 0;
       margin-top: -14px;
@@ -48,13 +48,14 @@
       font-style: italic;
       font-weight: bolder;
       color: rgb(219, 139, 0);
-  }
+    }
+
     h1 {
       text-align: center;
       margin-top: -28px ;
       margin-bottom: 1 px;
       font-weight: 520;
-      font-family: Arial, sans-serif;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
     #messages {
       text-align: center;
@@ -117,7 +118,7 @@
       justify-content: center;
       gap: 40px;
       margin-top: 20px;
-      max-width: 1200px;
+      max-width: 1700px;
       margin-left: auto;
       margin-right: auto;
     }
@@ -130,7 +131,7 @@
       text-align: center;
       margin-bottom: 6px;
       font-weight: 600;
-      font-size: 1rem;
+      font-size: 1.2rem;
       color: #444;
     }
     table {
@@ -150,21 +151,25 @@
     table th {
       font-weight: 600;
     }
-    table tfoot td {
-      font-weight: 600;
-    }
-    /* Agency table rows are clickable */
-    #agency-table tbody tr {
+
+    /* Row hover & selection styling */
+    table tbody tr {
       cursor: pointer;
     }
-    /* Simple highlight on hover */
-    #agency-table tbody tr:hover {
+    table tbody tr:hover {
       background-color: #e7f1fa;
     }
-    /* Selected row style (we'll toggle it in JS) */
+    /* Keep the same hover color for the selected row */
     .selected-row {
-      background-color: #cce4f7 !important;
+      background-color: #e7f1fa !important;
     }
+
+    .bottomline {
+      margin-bottom: 20;
+      font-size: 14px;
+    }
+
+
   </style>
 </head>
 <body>
@@ -172,62 +177,71 @@
   <div id="header1">FBNYC</div>
   <div id="header2">Data</div>
   <h1>Food Distribution YTD</h1>
-  <p id="messages">Loading data from CSV...</p>
+  <p id="messages">Loading data...</p>
 
   <!-- Cards Row -->
-  <div id="cards-container">
-    <!-- We'll dynamically fill 6 cards here -->
-  </div>
+  <div id="cards-container"></div>
 
   <!-- Chart Container -->
   <div id="chart-container">
     <canvas id="myChart" width="400" height="200"></canvas>
   </div>
 
-  <!-- Tables Container (now includes all 5 tables) -->
+  <!-- Tables Container -->
   <div id="tables-container">
 
-        <!-- Table 3: Agency Type Totals -->
-        <div class="table-block">
-          <div class="table-title">Agency Type Totals</div>
-          <table id="agency-table"></table>
-        </div>
-        
-    <!-- Table 1: Month Totals -->
+    <!-- Table 1: Monthly Totals -->
     <div class="table-block">
       <div class="table-title">Monthly Totals</div>
       <table id="monthly-table"></table>
     </div>
 
-        <!-- Table 4: County Totals -->
-        <div class="table-block">
-          <div class="table-title">County Totals</div>
-          <table id="county-table"></table>
-        </div>
-
-        <!-- Table 5: Kosher / Halal Totals -->
-        <div class="table-block">
-          <div class="table-title">Culturally Relevant Totals</div>
-          <table id="kosher-halal-table"></table>
-        </div>
-
-
-    <!-- Table 2: Product Type Totals -->
+    <!-- Table 2: Agency Type Totals -->
     <div class="table-block">
-      <div class="table-title">Category Totals</div>
+      <div class="table-title">Agency Type Totals</div>
+      <table id="agency-table"></table>
+    </div>
+
+    <!-- Table 3: County Totals -->
+    <div class="table-block">
+      <div class="table-title">County Totals</div>
+      <table id="county-table"></table>
+    </div>
+
+    <!-- Table 4: Kosher / Halal Totals -->
+    <div class="table-block">
+      <div class="table-title">Culturally Relevant Totals</div>
+      <table id="kosher-halal-table"></table>
+    </div>
+
+    <!-- Table 5: Overall Product Mix -->
+    <div class="table-block">
+      <div class="table-title">Overall Product Mix</div>
       <table id="category-table"></table>
     </div>
 
+    <!-- Table 6: Donated Mix (New) -->
+    <div class="table-block">
+      <div class="table-title">Food Rescue Product Mix</div>
+      <table id="donated-table"></table>
+    </div>
+
   </div>
+  <div class="bottomline"></div>
+
 
   <script>
-    // Store original data & chart instance globally so we can re-render
+    // Global data & chart instance
     let originalData = [];
-    let currentAgencyFilter = null; // track which agency is selected (if any)
-    let myChart = null;            // chart instance
+    let myChart = null;
 
-    // Public or SAS-enabled CSV URL
-    const CSV_BLOB_URL = "https://fbnycpublic.blob.core.windows.net/mapdata/customsearch64472.csv?sv=2022-11-02&ss=bfqt&srt=sco&sp=rptfx&se=2050-01-18T03%3A56%3A20Z&st=2025-01-17T19%3A56%3A20Z&spr=https&sig=u41iVNckMwY%2Fkx76wPlA6CfSUzP9Ls4PUijuBfSsWAY%3D";
+    // Track current filter so we only allow one dimension filter at a time
+    let currentFilterDimension = null; 
+    let currentFilterValue = null;
+
+    // Public CSV URL
+    const CSV_BLOB_URL =
+      "https://fbnycpublic.blob.core.windows.net/mapdata/customsearch64472.csv?sv=2022-11-02&ss=bfqt&srt=sco&sp=rptfx&se=2050-01-18T03%3A56%3A20Z&st=2025-01-17T19%3A56%3A20Z&spr=https&sig=u41iVNckMwY%2Fkx76wPlA6CfSUzP9Ls4PUijuBfSsWAY%3D";
 
     // -------------- Parse CSV and Initialize --------------
     Papa.parse(CSV_BLOB_URL, {
@@ -236,22 +250,17 @@
       skipEmptyLines: true,
       complete: function(results) {
         if (results.errors && results.errors.length > 0) {
-          document.getElementById('messages').textContent =
+          document.getElementById("messages").textContent =
             "Error parsing CSV: " + results.errors[0].message;
           return;
         }
 
         originalData = results.data;
-        console.log("Parsed data sample:", originalData[0]); // Inspect a sample row
-
-        // Clear the loading message
-        document.getElementById('messages').textContent = "";
-
-        // Build the full dashboard with unfiltered data
+        document.getElementById("messages").textContent = "";
         buildDashboard(originalData);
       },
       error: function(err) {
-        document.getElementById('messages').textContent =
+        document.getElementById("messages").textContent =
           "Failed to fetch CSV: " + err;
       }
     });
@@ -259,13 +268,13 @@
 
     // -------------- Build the Entire Dashboard --------------
     function buildDashboard(data) {
-      // 1) Aggregate data
       const {
-        monthlyTotals,
-        categoryTotals,
-        agencyTotals,
-        countyTotals,
-        kosherHalalTotals,
+        monthlyTotals, monthlySets,
+        categoryTotals, categorySets,
+        agencyTotals, agencyTypeSets,
+        countyTotals, countySets,
+        kosherHalalTotals, kosherHalalSets,
+        donatedTotals, donatedSets,
         distinctAgencies,
         distinctZips,
         totalNetWeight,
@@ -273,48 +282,36 @@
         totalCultural
       } = aggregateData(data);
 
-      // 2) Chart data
-      const labels = Object.keys(monthlyTotals).sort();
-      const values = labels.map(m => monthlyTotals[m]);
+      // Prepare data for the chart (Monthly)
+      const monthLabels = Object.keys(monthlyTotals).sort();
+      const monthValues = monthLabels.map(m => monthlyTotals[m]);
 
-      // 3) Build main tables
-      renderMonthlyTable(labels, values);
-      renderCategoryTable(categoryTotals);
-      renderAgencyTable(agencyTotals);
-      renderCountyTable(countyTotals);
-      renderKosherHalalTable(kosherHalalTotals);
+      // Render all tables
+      renderMonthlyTable(monthLabels, monthValues, monthlySets);
+      renderAgencyTable(agencyTotals, agencyTypeSets);
+      renderCountyTable(countyTotals, countySets);
+      renderKosherHalalTable(kosherHalalTotals, kosherHalalSets);
+      renderCategoryTable(categoryTotals, categorySets);
 
-      // 4) Render chart
-      renderChart(labels, values);
+      // New Donated Mix Table
+      renderDonatedTable(donatedTotals, donatedSets);
 
-      // 5) Build cards
+      // Render chart
+      renderChart(monthLabels, monthValues);
+
+      // Cards
       const cardData = [
-        {
-          title: "Pounds Distributed",
-          value: totalNetWeight
-        },
-        {
-          title: "Meals Served",
-          value: totalNetWeight / 1.2
-        },
-        {
-          title: "Agencies Served",
-          value: distinctAgencies.size
-        },
-        {
-          title: "Pounds of Fresh Produce",
-          value: totalFreshProduce
-        },
-        {
-          title: "Zip Codes Reached",
-          value: distinctZips.size
-        },
-        {
-          title: "Pounds of Culturally Relevant Food",
-          value: totalCultural
-        }
+        { title: "Pounds Distributed", value: totalNetWeight },
+        { title: "Meals Served", value: totalNetWeight / 1.2 },
+        { title: "Agencies Served", value: distinctAgencies.size },
+        { title: "Pounds of Fresh Produce", value: totalFreshProduce },
+        { title: "Zip Codes Reached", value: distinctZips.size },
+        { title: "Pounds of Culturally Relevant Food", value: totalCultural }
       ];
       renderCards(cardData);
+
+      // Attach click-to-filter handlers on each table
+      addAllTableClickHandlers();
     }
 
 
@@ -324,10 +321,19 @@
       const categoryTotals = {};
       const agencyTotals = {};
       const countyTotals = {};
-      const kosherHalalTotals = {
-        Kosher: 0,
-        Halal: 0
-      };
+      const kosherHalalTotals = { Kosher: 0, Halal: 0 };
+
+      // We'll track sums & sets specifically for "Donated" (Class === 'Donated')
+      const donatedTotals = {};
+
+      // Distinct sets
+      const monthlySets = {};
+      const categorySets = {};
+      const agencyTypeSets = {};
+      const countySets = {};
+      const kosherHalalSets = { Kosher: new Set(), Halal: new Set() };
+
+      const donatedSets = {};
 
       const distinctAgencies = new Set();
       const distinctZips = new Set();
@@ -337,78 +343,102 @@
       let totalCultural = 0;
 
       data.forEach(row => {
-        const dateStr = row["Month"];
-        const netWeightStr = row["Sum of Net Weight"];
-        const category = row["Product Type"];
-        const dietary = (row["DIETARY OPTIONS"] || "").toLowerCase();
-        const zip = row["Shipping Zip"];
-        const agencyId = row["ID"];
-        const agencyType = row["Agency Type"];
-        const county = row["County"];
+        const dateStr       = row["Month"];
+        const netWeightStr  = row["Sum of Net Weight"];
+        const category      = row["Product Type"];
+        const dietary       = (row["DIETARY OPTIONS"] || "").toLowerCase();
+        const zip           = row["Shipping Zip"];
+        const agencyId      = row["ID"];
+        const agencyType    = row["Agency Type"];
+        const county        = row["County"];
+        const classValue    = row["Class"];  // new column: e.g. "Donated"
 
         if (!netWeightStr) return;
         const netWeight = parseFloat(netWeightStr) || 0;
 
-        // Distinct
         if (agencyId) distinctAgencies.add(agencyId);
         if (zip) distinctZips.add(zip);
-
-        // Summation
         totalNetWeight += netWeight;
 
         // Fresh produce
         if (category === "Fresh Produce") {
           totalFreshProduce += netWeight;
         }
-
         // Cultural
         if (dietary.includes("halal") || dietary.includes("kosher")) {
           totalCultural += netWeight;
         }
 
-        // Monthly Totals
+        // Monthly
         if (dateStr) {
           const [yearStr, monthStr] = dateStr.split("-");
           const year = parseInt(yearStr, 10);
           const monthNum = parseInt(monthStr, 10);
           if (year && monthNum) {
-            const monthKey = `${year}-${String(monthNum).padStart(2, '0')}`;
+            const monthKey = `${year}-${String(monthNum).padStart(2, "0")}`;
             monthlyTotals[monthKey] = (monthlyTotals[monthKey] || 0) + netWeight;
+            if (!monthlySets[monthKey]) {
+              monthlySets[monthKey] = new Set();
+            }
+            monthlySets[monthKey].add(agencyId);
           }
         }
 
-        // Category Totals
+        // Overall Category
         if (category) {
           categoryTotals[category] = (categoryTotals[category] || 0) + netWeight;
+          if (!categorySets[category]) {
+            categorySets[category] = new Set();
+          }
+          categorySets[category].add(agencyId);
         }
 
-        // Agency Type Totals
+        // Agency Type
         if (agencyType) {
           agencyTotals[agencyType] = (agencyTotals[agencyType] || 0) + netWeight;
+          if (!agencyTypeSets[agencyType]) {
+            agencyTypeSets[agencyType] = new Set();
+          }
+          agencyTypeSets[agencyType].add(agencyId);
         }
 
-        // County Totals
+        // County
         if (county) {
           countyTotals[county] = (countyTotals[county] || 0) + netWeight;
+          if (!countySets[county]) {
+            countySets[county] = new Set();
+          }
+          countySets[county].add(agencyId);
         }
 
-        // Kosher/Halal Totals
+        // Kosher/Halal
         if (dietary.includes("kosher")) {
           kosherHalalTotals.Kosher += netWeight;
+          kosherHalalSets.Kosher.add(agencyId);
         }
         if (dietary.includes("halal")) {
           kosherHalalTotals.Halal += netWeight;
+          kosherHalalSets.Halal.add(agencyId);
+        }
+
+        // Donated Mix (Class === 'Donated')
+        if (classValue === "Donated" && category) {
+          donatedTotals[category] = (donatedTotals[category] || 0) + netWeight;
+          if (!donatedSets[category]) {
+            donatedSets[category] = new Set();
+          }
+          donatedSets[category].add(agencyId);
         }
       });
 
       return {
-        monthlyTotals,
-        categoryTotals,
-        agencyTotals,
-        countyTotals,
-        kosherHalalTotals,
-        distinctAgencies,
-        distinctZips,
+        monthlyTotals,       monthlySets,
+        categoryTotals,      categorySets,
+        agencyTotals,        agencyTypeSets,
+        countyTotals,        countySets,
+        kosherHalalTotals,   kosherHalalSets,
+        donatedTotals,       donatedSets,
+        distinctAgencies,    distinctZips,
         totalNetWeight,
         totalFreshProduce,
         totalCultural
@@ -418,29 +448,22 @@
 
     // -------------- Chart Rendering --------------
     function renderChart(labels, values) {
-      const ctx = document.getElementById('myChart').getContext('2d');
+      const ctx = document.getElementById("myChart").getContext("2d");
+      if (myChart) myChart.destroy();
 
-      // If there's an existing chart, destroy it to re-render cleanly
-      if (myChart) {
-        myChart.destroy();
-      }
-  
-      if (myChart) {
-        myChart.destroy();
-      }
-      
       myChart = new Chart(ctx, {
-        type: 'bar',
+        type: "bar",
         data: {
           labels: labels,
-          datasets: [{
-            label: 'Monthly Pounds',
-            data: values,
-            backgroundColor: 'rgba(219,139,0,1)',
-            borderColor: 'rgb(51,51,51,1)',
-            borderWidth: 2,
-            size: 20
-          }]
+          datasets: [
+            {
+              label: "Monthly Pounds",
+              data: values,
+              backgroundColor: "rgba(219,139,0,1)",
+              borderColor: "rgb(51,51,51,1)",
+              borderWidth: 2
+            }
+          ]
         },
         options: {
           responsive: true,
@@ -449,50 +472,25 @@
               beginAtZero: true,
               title: {
                 display: true,
-                text: 'Pounds',
-                font: {
-                  family: 'Helvetica, sans-serif', // Font family
-                  size: 20,                    // Font size in px
-               // Font weight (e.g., 'bold', 600, etc.)
-                },
+                text: "Pounds",
+                font: { family: "Helvetica, sans-serif", size: 20 }
               }
             },
             x: {
               title: {
                 display: true,
-                text: 'Month',
-                font: {
-                  family: 'Helvetica, sans-serif', // Font family
-                  size: 20,                    // Font size in px
-               // Font weight (e.g., 'bold', 600, etc.)
-                },
+                text: "Month",
+                font: { family: "Helvetica, sans-serif", size: 20 }
               }
             }
           },
           plugins: {
-            legend: {
-              display: false
-            },
-            title: {
-              display: true,
-              text: ' ',
-              color: '#33333', // Title text color
-              font: {
-                family: 'Helvetica, sans-serif', // Font family
-                size: 22,                    // Font size in px
-             // Font weight (e.g., 'bold', 600, etc.)
-              },
-              padding: {
-                top: 10,
-                bottom: 10
-              }
-            },
-
+            legend: { display: false },
             tooltip: {
               callbacks: {
                 label: function(context) {
                   const val = Math.round(context.parsed.y);
-                  return context.dataset.label + ': ' + val.toLocaleString();
+                  return context.dataset.label + ": " + val.toLocaleString();
                 }
               }
             }
@@ -519,90 +517,63 @@
     }
 
 
-    // -------------- Table 1: Monthly Totals --------------
-    function renderMonthlyTable(labels, values) {
-      const monthlyTable = document.getElementById("monthly-table");
+    // ------------------ TABLE RENDERING ------------------
 
+    // Table 1: Monthly Totals
+    function renderMonthlyTable(labels, values, monthlySets) {
+      const monthlyTable = document.getElementById("monthly-table");
       const ytdTotal = values.reduce((acc, val) => acc + val, 0);
       const ytdRounded = Math.round(ytdTotal).toLocaleString();
+
+      // Union of all monthly sets to get distinct agencies for YTD
+      const ytdSet = new Set();
+      labels.forEach(m => {
+        if (monthlySets[m]) {
+          monthlySets[m].forEach(agId => ytdSet.add(agId));
+        }
+      });
+      const ytdDistinctAgencies = ytdSet.size;
 
       let html = `
         <thead>
           <tr>
             <th>Month</th>
             <th>Pounds</th>
+            <th>Agencies Served</th>
           </tr>
         </thead>
         <tbody>
       `;
-
       for (let i = 0; i < labels.length; i++) {
         const month = labels[i];
         const pounds = Math.round(values[i]).toLocaleString();
+        const agenciesCount = monthlySets[month] ? monthlySets[month].size : 0;
+        // data-month for filtering
         html += `
-          <tr>
+          <tr data-month="${month}">
             <td>${month}</td>
             <td>${pounds}</td>
+            <td>${agenciesCount}</td>
           </tr>
         `;
       }
 
+      // YTD row
       html += `
-        <tr style="font-weight: bold;">
+        <tr style="font-weight:bold;">
           <td>YTD Total</td>
           <td>${ytdRounded}</td>
+          <td>${ytdDistinctAgencies}</td>
         </tr>
       `;
-
       html += `</tbody>`;
       monthlyTable.innerHTML = html;
     }
 
-
-    // -------------- Table 2: Product Type Totals --------------
-    function renderCategoryTable(categoryTotals) {
-      const categoryTable = document.getElementById("category-table");
-
-      const entries = Object.entries(categoryTotals);
-      entries.sort((a, b) => b[1] - a[1]);
-
-      const grandTotal = entries.reduce((acc, item) => acc + item[1], 0);
-
-      let html = `
-        <thead>
-          <tr>
-            <th>Product Type</th>
-            <th>Pounds</th>
-            <th>% of Total</th>
-          </tr>
-        </thead>
-        <tbody>
-      `;
-
-      for (const [category, rawPounds] of entries) {
-        const pounds = Math.round(rawPounds);
-        const pct = grandTotal === 0 ? 0 : (pounds / grandTotal * 100).toFixed(1);
-        html += `
-          <tr>
-            <td>${category}</td>
-            <td>${pounds.toLocaleString()}</td>
-            <td>${pct}%</td>
-          </tr>
-        `;
-      }
-
-      html += `</tbody>`;
-      categoryTable.innerHTML = html;
-    }
-
-
-    // -------------- Table 3: Agency Type Totals (Clickable) --------------
-    function renderAgencyTable(agencyTotals) {
+    // Table 2: Agency Type Totals
+    function renderAgencyTable(agencyTotals, agencyTypeSets) {
       const agencyTable = document.getElementById("agency-table");
-
-      const entries = Object.entries(agencyTotals);
-      entries.sort((a, b) => b[1] - a[1]);
-
+      const entries = Object.entries(agencyTotals).sort((a, b) => b[1] - a[1]);
       const grandTotal = entries.reduce((acc, item) => acc + item[1], 0);
 
       let html = `
@@ -611,41 +582,34 @@
             <th>Agency Type</th>
             <th>Pounds</th>
             <th>% of Total</th>
+            <th>Agencies Served</th>
           </tr>
         </thead>
         <tbody>
       `;
-
       for (const [agencyType, rawPounds] of entries) {
         const pounds = Math.round(rawPounds);
-        const pct = grandTotal === 0 ? 0 : (pounds / grandTotal * 100).toFixed(1);
+        const pct = grandTotal === 0 ? 0 : ((pounds / grandTotal) * 100).toFixed(1);
+        const agenciesCount = agencyTypeSets[agencyType] ? agencyTypeSets[agencyType].size : 0;
 
-        // data-agencytype used for easy retrieval on click
+        // data-agencytype for filtering
         html += `
           <tr data-agencytype="${agencyType}">
             <td>${agencyType}</td>
             <td>${pounds.toLocaleString()}</td>
             <td>${pct}%</td>
+            <td>${agenciesCount}</td>
           </tr>
         `;
       }
-
       html += `</tbody>`;
       agencyTable.innerHTML = html;
-
-      // Add click event listeners for "powerbi-like" filtering
-      addAgencyTableClickHandlers();
     }
 
-
-    // -------------- Table 4: County Totals --------------
-    function renderCountyTable(countyTotals) {
+    // Table 3: County Totals
+    function renderCountyTable(countyTotals, countySets) {
       const countyTable = document.getElementById("county-table");
-
-      const entries = Object.entries(countyTotals);
-      // Sort descending by pounds
-      entries.sort((a, b) => b[1] - a[1]);
-
+      const entries = Object.entries(countyTotals).sort((a, b) => b[1] - a[1]);
       const total = entries.reduce((acc, item) => acc + item[1], 0);
 
       let html = `
@@ -654,97 +618,223 @@
             <th>County</th>
             <th>Pounds</th>
             <th>% of Total</th>
+            <th>Agencies Served</th>
           </tr>
         </thead>
         <tbody>
       `;
-
       for (const [county, rawPounds] of entries) {
         const pounds = Math.round(rawPounds);
-        const pct = total === 0 ? 0 : (pounds / total * 100).toFixed(1);
+        const pct = total === 0 ? 0 : ((pounds / total) * 100).toFixed(1);
+        const agenciesCount = countySets[county] ? countySets[county].size : 0;
+
+        // data-county for filtering
         html += `
-          <tr>
+          <tr data-county="${county}">
             <td>${county}</td>
             <td>${pounds.toLocaleString()}</td>
             <td>${pct}%</td>
+            <td>${agenciesCount}</td>
           </tr>
         `;
       }
-
       html += `</tbody>`;
       countyTable.innerHTML = html;
     }
 
-
-    // -------------- Table 5: Kosher / Halal Totals --------------
-    function renderKosherHalalTable(kosherHalalTotals) {
+    // Table 4: Kosher / Halal Totals
+    function renderKosherHalalTable(kosherHalalTotals, kosherHalalSets) {
       const table = document.getElementById("kosher-halal-table");
-
-      // We'll treat them like "entries" => [ ["Kosher", 5000], ["Halal", 3000] ]
-      const entries = Object.entries(kosherHalalTotals);
-      // Sort descending
-      entries.sort((a, b) => b[1] - a[1]);
+      const entries = Object.entries(kosherHalalTotals).sort((a, b) => b[1] - a[1]);
 
       let html = `
         <thead>
           <tr>
             <th>Kosher / Halal</th>
             <th>Pounds</th>
+            <th>Agencies Served</th>
           </tr>
         </thead>
         <tbody>
       `;
-
       for (const [dietaryType, rawPounds] of entries) {
         const pounds = Math.round(rawPounds).toLocaleString();
+        const agenciesCount = kosherHalalSets[dietaryType]
+          ? kosherHalalSets[dietaryType].size
+          : 0;
+
+        // data-kosherhalal for filtering
         html += `
-          <tr>
+          <tr data-kosherhalal="${dietaryType}">
             <td>${dietaryType}</td>
             <td>${pounds}</td>
+            <td>${agenciesCount}</td>
           </tr>
         `;
       }
-
       html += `</tbody>`;
       table.innerHTML = html;
     }
 
+    // Table 5: Overall Product Mix
+    function renderCategoryTable(categoryTotals, categorySets) {
+      const categoryTable = document.getElementById("category-table");
+      const entries = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1]);
+      const grandTotal = entries.reduce((acc, item) => acc + item[1], 0);
 
-    // -------------- Interactive Filtering (Agency Table) --------------
-    function addAgencyTableClickHandlers() {
-      const agencyTable = document.getElementById("agency-table");
-      const rows = agencyTable.querySelectorAll("tbody tr");
+      let html = `
+        <thead>
+          <tr>
+            <th>Product Type</th>
+            <th>Pounds</th>
+            <th>% of Total</th>
+            <th>Agencies Served</th>
+          </tr>
+        </thead>
+        <tbody>
+      `;
+      for (const [category, rawPounds] of entries) {
+        const pounds = Math.round(rawPounds);
+        const pct = grandTotal === 0 ? 0 : ((pounds / grandTotal) * 100).toFixed(1);
+        const agenciesCount = categorySets[category] ? categorySets[category].size : 0;
+
+        // data-category for filtering (all class types combined)
+        html += `
+          <tr data-category="${category}">
+            <td>${category}</td>
+            <td>${pounds.toLocaleString()}</td>
+            <td>${pct}%</td>
+            <td>${agenciesCount}</td>
+          </tr>
+        `;
+      }
+      html += `</tbody>`;
+      categoryTable.innerHTML = html;
+    }
+
+    // Table 6: Donated Mix (Same columns, but only where Class == "Donated")
+    function renderDonatedTable(donatedTotals, donatedSets) {
+      const donatedTable = document.getElementById("donated-table");
+      const entries = Object.entries(donatedTotals).sort((a, b) => b[1] - a[1]);
+      const grandTotal = entries.reduce((acc, item) => acc + item[1], 0);
+
+      let html = `
+        <thead>
+          <tr>
+            <th>Product Type (Donated Only)</th>
+            <th>Pounds</th>
+            <th>% of Donated</th>
+            <th>Agencies Served</th>
+          </tr>
+        </thead>
+        <tbody>
+      `;
+      for (const [category, rawPounds] of entries) {
+        const pounds = Math.round(rawPounds);
+        const pct = grandTotal === 0 ? 0 : ((pounds / grandTotal) * 100).toFixed(1);
+        const agenciesCount = donatedSets[category] ? donatedSets[category].size : 0;
+
+        // We'll give it a custom data attr: data-donatedcat
+        html += `
+          <tr data-donatedcat="${category}">
+            <td>${category}</td>
+            <td>${pounds.toLocaleString()}</td>
+            <td>${pct}%</td>
+            <td>${agenciesCount}</td>
+          </tr>
+        `;
+      }
+      html += `</tbody>`;
+      donatedTable.innerHTML = html;
+    }
+
+
+    // ---------------------------------------------------
+    //       POWER BI–STYLE CLICK-TO-FILTER LOGIC
+    // ---------------------------------------------------
+
+    // 1) Add click handlers for each table:
+    function addAllTableClickHandlers() {
+      addTableClickHandlers("monthly-table",      "data-month",       "Month");
+      addTableClickHandlers("agency-table",       "data-agencytype",  "Agency Type");
+      addTableClickHandlers("county-table",       "data-county",      "County");
+      // "specialCase" for Kosher/Halal substring filter
+      addTableClickHandlers("kosher-halal-table", "data-kosherhalal", "kosher-halal", true);
+      addTableClickHandlers("category-table",     "data-category",    "Product Type");
+
+      // New: For the Donated Mix table
+      // We'll treat it as dimension "Donated Mix" and filter by (Product Type == row) + Class == "Donated"
+      addTableClickHandlers("donated-table",      "data-donatedcat",  "Donated Mix");
+    }
+
+    // 2) Generic function that sets up row clicks
+    function addTableClickHandlers(tableId, dataAttr, dimensionName, specialCase = false) {
+      const table = document.getElementById(tableId);
+      if (!table) return;
+      const rows = table.querySelectorAll("tbody tr");
 
       rows.forEach(row => {
         row.addEventListener("click", () => {
-          const selectedAgency = row.getAttribute("data-agencytype");
+          const selectedValue = row.getAttribute(dataAttr);
 
-          // If user clicks same row again, clear filter
-          if (selectedAgency === currentAgencyFilter) {
-            currentAgencyFilter = null;
-            removeRowHighlight();
+          // If re-clicking the same dimension & value, clear it
+          if (currentFilterDimension === dimensionName && currentFilterValue === selectedValue) {
+            currentFilterDimension = null;
+            currentFilterValue = null;
+            removeAllRowHighlights();
             buildDashboard(originalData);
           } else {
-            // highlight this row, unhighlight others
-            removeRowHighlight();
+            // Otherwise, apply new filter
+            removeAllRowHighlights();
             row.classList.add("selected-row");
-            currentAgencyFilter = selectedAgency;
-            // Filter the data
-            const filtered = originalData.filter(
-              r => r["Agency Type"] === selectedAgency
-            );
-            buildDashboard(filtered);
+            currentFilterDimension = dimensionName;
+            currentFilterValue = selectedValue;
+
+            // Filter logic depends on dimension
+            let filteredData = [];
+
+            if (dimensionName === "kosher-halal" && specialCase) {
+              // For Kosher/Halal, do a substring match on "DIETARY OPTIONS"
+              filteredData = originalData.filter(r => {
+                const diet = (r["DIETARY OPTIONS"] || "").toLowerCase();
+                return diet.includes(selectedValue.toLowerCase());
+              });
+            } 
+            else if (dimensionName === "Donated Mix") {
+              // Only Class == "Donated" AND Product Type == selectedValue
+              filteredData = originalData.filter(r =>
+                r["Class"] === "Donated" && r["Product Type"] === selectedValue
+              );
+            }
+            else {
+              // For other dimension (Month, Agency Type, County, Product Type)
+              filteredData = originalData.filter(r => r[dimensionName] === selectedValue);
+            }
+            buildDashboard(filteredData);
           }
         });
       });
     }
 
-    function removeRowHighlight() {
-      const agencyTable = document.getElementById("agency-table");
-      const rows = agencyTable.querySelectorAll("tbody tr");
-      rows.forEach(r => r.classList.remove("selected-row"));
+    // 3) Removes "selected-row" highlight from all tables
+    function removeAllRowHighlights() {
+      const tableIds = [
+        "monthly-table",
+        "agency-table",
+        "county-table",
+        "kosher-halal-table",
+        "category-table",
+        "donated-table"
+      ];
+      tableIds.forEach(tid => {
+        const tbl = document.getElementById(tid);
+        if (tbl) {
+          const rows = tbl.querySelectorAll("tbody tr");
+          rows.forEach(r => r.classList.remove("selected-row"));
+        }
+      });
     }
   </script>
-  <iframe width='50%' height='400px' src="https://api.mapbox.com/styles/v1/arnavkrishna/cm7awyuxo006w01s6diojbh6c.html?title=false&access_token=pk.eyJ1IjoiYXJuYXZrcmlzaG5hIiwiYSI6ImNtNXlhc285dTBoNGwybnB4NDRyZ2phNXgifQ.Q1UhzlIAHhPma35DGkdEeg&zoomwheel=false#10.26/40.6575/-73.9993/8.8/54" title="capillary_v1" style="border:none;"></iframe>
+  
 </body>
 </html>
