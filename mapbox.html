@@ -3,21 +3,18 @@
 <head>
   <meta charset="utf-8" />
   <title>FBNYC Find Food Map</title>
-  <link rel="icon" href="lightning.png" type="image/x-icon">
+  <link rel="icon" href="lightning.png" type="image/x-icon" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <!-- Mapbox + Papa Parse -->
-  <link
-    href="https://api.mapbox.com/mapbox-gl-js/v2.13.0/mapbox-gl.css"
-    rel="stylesheet"
-  />
+  <link href="https://api.mapbox.com/mapbox-gl-js/v2.13.0/mapbox-gl.css" rel="stylesheet" />
   <script src="https://api.mapbox.com/mapbox-gl-js/v2.13.0/mapbox-gl.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
 
   <style>
     /* Base resets, no page scrolling */
     html, body {
-      margin: 0; 
+      margin: 0;
       padding: 0;
       width: 100%;
       height: 100%;
@@ -65,12 +62,12 @@
       box-shadow: 0 2px 8px rgba(0,0,0,0.15);
     }
     .legend-item {
-      display: flex; 
-      align-items: center; 
+      display: flex;
+      align-items: center;
       margin-bottom: 4px;
     }
     .color-box {
-      width: 12px; 
+      width: 12px;
       height: 12px;
       margin-right: 8px;
       border: 1px solid #333;
@@ -126,8 +123,8 @@
 
     /* RIGHT DETAILS PANE (Agency Info) */
     #details-pane {
-      position: fixed; 
-      top: 0; 
+      position: fixed;
+      top: 0;
       bottom: 0;
       right: 0;
       width: 450px;
@@ -188,9 +185,9 @@
       background-color: #f0f0f0;
     }
     .button-container {
-      display: flex; 
-      justify-content: center; 
-      margin: 12px 0; 
+      display: flex;
+      justify-content: center;
+      margin: 12px 0;
       padding-bottom: 25px;
     }
     #directions-button {
@@ -211,7 +208,7 @@
     .filter-section { margin-bottom: 12px; }
     .search-input {
       margin-bottom: 8px;
-      margin-top: 5px ;
+      margin-top: 5px;
       padding: 6px;
       width: 80%;
       max-width: 300px;
@@ -220,7 +217,7 @@
 
     /* SITE MARKERS */
     .site-marker {
-      width: 16px; 
+      width: 16px;
       height: 16px;
       border: 2px solid #333;
       border-radius: 50%;
@@ -284,6 +281,13 @@
         <label><input type="checkbox" class="meal-filter" value="Lunch" /> Lunch</label><br />
         <label><input type="checkbox" class="meal-filter" value="Dinner" /> Dinner</label><br />
       </div>
+      
+      <!-- Open Now (Weekly only) -->
+      <div class="filter-section">
+        <strong>Status</strong><br />
+        <label><input type="checkbox" id="open-now-checkbox" /> Open Now</label>
+        <strong></strong><br />
+      </div>
 
       <div class="filter-section">
         <strong>Search by ZIP code:</strong><br />
@@ -305,6 +309,7 @@
           placeholder="Enter Agency Name"
         />
       </div>
+
     </div>
   </div>
 
@@ -317,10 +322,13 @@
   </div>
 
   <script>
-    // Mapbox token (OK for demos/small usage)
+    // Mapbox token (replace with your own token if needed)
     mapboxgl.accessToken = "pk.eyJ1IjoiYXJuYXZrcmlzaG5hIiwiYSI6ImNtNXlhc285dTBoNGwybnB4NDRyZ2phNXgifQ.Q1UhzlIAHhPma35DGkdEeg";
 
-    let allData = [], filteredData = [], markers = [];
+    let allData = [], filteredData = [];
+    let allLocations = {};  // Stores all data grouped by lat/lng (unfiltered)
+
+    let markers = [];
     let highlighted = null;
 
     // Create map
@@ -344,6 +352,8 @@
           new mapboxgl.Marker({ color: "#007BFF" })
             .setLngLat([longitude, latitude])
             .addTo(map);
+            // Force the user marker to be on top:
+            userMarker.getElement().style.zIndex = 9999;
         },
         (err) => {
           console.warn("Geolocation error:", err);
@@ -357,45 +367,19 @@
       download: true,
       header: true,
       complete: (results) => {
+        // Keep only "Inactive" == "No"
         allData = results.data.filter((row) => row["Inactive"] === "No");
+
+        // Group all data by location (this has no filtering)
+        allLocations = groupByLocation(allData);
+
+        // Initially, let's show all data on the map
         filteredData = allData;
         addMarkers(filteredData);
       }
     });
 
-    // -------------
-    // MARKERS
-    // -------------
-    function addMarkers(data) {
-      // remove old markers
-      markers.forEach((m) => m.marker.remove());
-      markers = [];
-
-      const grouped = groupByLocation(data);
-      for (const key in grouped) {
-        const agencies = grouped[key];
-        const [lat, lng] = key.split(",").map(parseFloat);
-        if (isNaN(lat) || isNaN(lng)) continue;
-
-        // Determine color based on whether there's more than one unique Meal Type
-        const color = getColorForGroup(agencies);
-
-        // Create marker element
-        const el = document.createElement("div");
-        el.className = "site-marker";
-        el.style.backgroundColor = color;
-
-        // Add to map
-        const marker = new mapboxgl.Marker(el).setLngLat([lng, lat]).addTo(map);
-
-        markers.push({ marker, agencies, color, el });
-
-        el.addEventListener("click", () => {
-          toggleMarker(marker, color, agencies);
-        });
-      }
-    }
-
+    // Group rows by lat/lng => object { "lat,lng": [rows...] }
     function groupByLocation(rows) {
       const obj = {};
       rows.forEach((r) => {
@@ -408,7 +392,44 @@
       return obj;
     }
 
-    // If multiple distinct meal types => #FFA500 (Multi-Service), else color by the single meal type
+    // Create markers based on filteredData
+    function addMarkers(data) {
+      // remove old markers
+      markers.forEach((m) => m.marker.remove());
+      markers = [];
+
+      // Group the *filtered* data to decide which markers appear
+      const subset = groupByLocation(data);
+
+      // For each location in the filtered subset
+      for (const locationKey in subset) {
+        const agencies = subset[locationKey];
+        const [lat, lng] = locationKey.split(",").map(parseFloat);
+        if (isNaN(lat) || isNaN(lng)) continue;
+
+        // Decide marker color based on meal type(s)
+        const color = getColorForGroup(agencies);
+
+        // Create a marker element
+        const el = document.createElement("div");
+        el.className = "site-marker";
+        el.style.backgroundColor = color;
+
+        // Add to map
+        const marker = new mapboxgl.Marker(el)
+          .setLngLat([lng, lat])
+          .addTo(map);
+
+        markers.push({ marker, color, el, locationKey });
+
+        // On click, show details for the *unfiltered* data at this location
+        el.addEventListener("click", () => {
+          toggleMarker(marker, color, locationKey);
+        });
+      }
+    }
+
+    // If multiple distinct meal types => #FFA500 (Multi-Service), else color by single meal type
     function getColorForGroup(agencies) {
       const mealTypes = new Set();
       agencies.forEach((a) => {
@@ -418,7 +439,7 @@
       if (mealTypes.size > 1) {
         return "#FFA500"; // Multi-Service
       } else {
-        // Only one meal type in this group
+        // Only one meal type
         return getMealColor(agencies[0]["Meal Type"]);
       }
     }
@@ -426,7 +447,7 @@
     // Color by single meal type
     function getMealColor(mealType) {
       const t = (mealType || "").toLowerCase();
-      if (t.includes("pantry bag distribution")) return "#8A2BE2";
+      if (t.includes("pantry bag")) return "#8A2BE2";
       if (t.includes("breakfast")) return "#c04343";
       if (t.includes("lunch")) return "#3CB371";
       if (t.includes("dinner")) return "#4682B4";
@@ -434,14 +455,17 @@
     }
 
     // Toggle highlight
-    function toggleMarker(marker, originalColor, agencies) {
+    function toggleMarker(marker, originalColor, locationKey) {
       if (highlighted && highlighted.marker === marker) {
         revertHighlight();
         closeDetailsPane();
       } else {
         revertHighlight();
         highlightMarker(marker, originalColor);
-        openDetailsPane(agencies);
+
+        // IMPORTANT: show details for ALL rows at that location, ignoring filters
+        const fullAgencies = allLocations[locationKey] || [];
+        openDetailsPane(fullAgencies);
       }
     }
 
@@ -463,9 +487,7 @@
       highlighted = null;
     }
 
-    // -------------
     // DETAILS PANE
-    // -------------
     const detailsPane = document.getElementById("details-pane");
     const detailsContent = document.getElementById("details-content");
 
@@ -473,7 +495,6 @@
     detailsPane.addEventListener("touchstart", (e) => {
       startX = e.touches[0].clientX;
     }, { passive: true });
-
     detailsPane.addEventListener("touchmove", (e) => {
       const currentX = e.touches[0].clientX;
       const diff = currentX - startX;
@@ -490,10 +511,11 @@
       detailsPane.classList.remove("open");
     }
 
+    // Build details table (shows all days/hours for the location)
     function buildAgencyHTML(agencies) {
       if (!agencies.length) return "<p>No agency data.</p>";
 
-      // Sort day->meal
+      // Sort by day-of-week -> meal type
       const dayOrder = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
       agencies.sort((a,b) => {
         const d = dayOrder.indexOf(a["Day of the Week"]) - dayOrder.indexOf(b["Day of the Week"]);
@@ -502,7 +524,7 @@
       });
 
       const first = agencies[0];
-      const agencyName = first["Agency"].split(":")[1]?.trim() || first["Agency"];
+      const agencyName = first["Agency"]?.split(":")[1]?.trim() || first["Agency"] || "";
       const address1 = first["Address 1"] || "";
       const address4 = first["Address 4"] || "";
       const phone = first["Phone"] || "";
@@ -549,12 +571,11 @@
       window.open(`https://www.google.com/maps/search/?api=1&query=${encoded}`, "_blank");
     }
 
-    // -------------
-    // FILTERS
-    // -------------
+    // FILTER PANE
     const filterPane = document.getElementById("filter-pane");
     const filterButton = document.getElementById("filter-button");
     filterButton.addEventListener("click", openFilterPane);
+
     function openFilterPane() {
       filterPane.classList.add("open");
     }
@@ -574,39 +595,98 @@
       }
     }, { passive: true });
 
+    // Filter UI elements
     const zipInput = document.getElementById("zip-search");
-    zipInput.addEventListener("input", () => applyFilters());
+    zipInput.addEventListener("input", applyFilters);
 
     const agencyInput = document.getElementById("agency-search");
-    agencyInput.addEventListener("input", () => applyFilters());
+    agencyInput.addEventListener("input", applyFilters);
 
-    // day, meal checkboxes
     document.querySelectorAll(".day-filter, .meal-filter").forEach((cb) => {
-      cb.addEventListener("change", () => applyFilters());
+      cb.addEventListener("change", applyFilters);
     });
 
+    const openNowCb = document.getElementById("open-now-checkbox");
+    openNowCb.addEventListener("change", applyFilters);
+
+    // Apply filters to produce a new 'filteredData' array, then re-draw markers
     function applyFilters() {
       const zipVal = zipInput.value.trim();
       const agencyVal = agencyInput.value.trim().toLowerCase();
-
       const selectedDays = Array.from(document.querySelectorAll(".day-filter:checked")).map((cb) => cb.value);
       const selectedMeals = Array.from(document.querySelectorAll(".meal-filter:checked")).map((cb) => cb.value);
+      const isOpenNow = openNowCb.checked;
+
+      // Build day name for today's date
+      const todayDayName = new Date().toLocaleString("en-US", { weekday: "long" });
+      const nowMinutes = getNowInMinutes();
 
       filteredData = allData.filter((row) => {
         const day = (row["Day of the Week"] || "").trim();
-        const meal = row["Meal Type"] || "Pantry Bag Distribution";
+        const meal = (row["Meal Type"] || "Pantry Bag Distribution").trim();
         const zipField = (row["Address 4"] || "").trim();
-        let agencyField = (row["Agency"] || "").toLowerCase();
+        const agencyField = (row["Agency"] || "").toLowerCase();
 
         const zipCheck = !zipVal || zipField.includes(zipVal);
         const dayCheck = (selectedDays.length === 0) || selectedDays.includes(day);
         const mealCheck = (selectedMeals.length === 0) || selectedMeals.includes(meal);
         const agencyCheck = !agencyVal || agencyField.includes(agencyVal);
 
-        return zipCheck && dayCheck && mealCheck && agencyCheck;
+        // If "Open Now" is checked => must meet these:
+        // 1) Frequency = "Weekly"
+        // 2) day == today's day
+        // 3) current time between Opening & Closing
+        let openNowCheck = true;
+        if (isOpenNow) {
+          openNowCheck = false;
+          if (row["Frequency"] === "Weekly" && day === todayDayName) {
+            // parse times
+            const openTime = parseTime12Hr(row["Opening Hour"]);
+            const closeTime = parseTime12Hr(row["Closing Hour"]);
+            if (openTime !== null && closeTime !== null) {
+              // now must be >= openTime and < closeTime
+              if (nowMinutes >= openTime && nowMinutes < closeTime) {
+                openNowCheck = true;
+              }
+            }
+          }
+        }
+
+        return zipCheck && dayCheck && mealCheck && agencyCheck && openNowCheck;
       });
 
       addMarkers(filteredData);
+
+      // Clear any highlight or detail pane
+      revertHighlight();
+      closeDetailsPane();
+    }
+
+    // Returns minutes after midnight for the current local time
+    function getNowInMinutes() {
+      const now = new Date();
+      return now.getHours() * 60 + now.getMinutes();
+    }
+
+    // Parse "8:30 AM" or "2:00 PM" -> minutes after midnight
+    // If your times are 24-hour format, adapt accordingly
+    function parseTime12Hr(timeStr) {
+      if (!timeStr) return null;
+      // e.g. "8:30 AM" or "2:00 PM"
+      const parts = timeStr.trim().split(" ");
+      if (parts.length < 2) return null;
+      let [timePart, ampm] = parts;
+      let [hourStr, minuteStr] = timePart.split(":");
+      let hour = parseInt(hourStr, 10);
+      let minute = parseInt(minuteStr, 10) || 0;
+      ampm = ampm.toUpperCase();
+
+      if (ampm === "PM" && hour < 12) {
+        hour += 12;
+      } else if (ampm === "AM" && hour === 12) {
+        hour = 0;
+      }
+      return hour * 60 + minute;
     }
   </script>
 </body>
