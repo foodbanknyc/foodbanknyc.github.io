@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>FBNYC Find Food Map</title>
+  <link rel="icon" href="lightning.png" type="image/x-icon" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Mapbox + Papa Parse -->
+  <link href="https://api.mapbox.com/mapbox-gl-js/v2.13.0/mapbox-gl.css" rel="stylesheet" />
+  <script src="https://api.mapbox.com/mapbox-gl-js/v2.13.0/mapbox-gl.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
+
+  <style>
+    /* Base resets, no page scrolling */
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      font-family: Arial, sans-serif;
+      box-sizing: border-box;
+      overflow: hidden;
+    }
+
+    /* Scrollbar styling (Chrome/Safari/Edge) */
+    ::-webkit-scrollbar {
+      width: 8px;
+      background-color: #f0f0f0;
+    }
+    ::-webkit-scrollbar-thumb {
+      background-color: #999;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background-color: #666;
+    }
+    /* Firefox scrollbar */
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: #999 #f0f0f0;
+    }
+
+    /* MAP occupies entire screen behind overlays */
+    #map {
+      width: 100%;
+      height: 100%;
+      border: 2px solid #ccc; /* optional border */
+    }
+
+    /* LEGEND pinned at bottom-left of map */
+    #legend {
+      position: absolute;
+      bottom: 20px; 
+      left: 20px;
+      z-index: 1000;
+      background: rgba(255,255,255,0.9);
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 0.9em;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+    .color-box {
+      width: 12px;
+      height: 12px;
+      margin-right: 8px;
+      border: 1px solid #333;
+    }
+
+    /* FILTER BUTTON in top-left corner */
+    #filter-button {
+      position: absolute;
+      top: 25px;
+      left: 25px;
+      z-index: 1100;
+      background-color: #ffffff;
+      color: #000000;
+      border: 2px solid #333;
+      border-radius: 4px;
+      padding: 8px 16px;
+      cursor: pointer;
+      font-size: 1em;
+      font-weight: bold;
+    }
+    #filter-button:hover {
+      background-color: #d3e6f0;
+    }
+
+    /* LEFT FILTER OVERLAY */
+    #filter-pane {
+      position: fixed;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      width: 350px;
+      max-width: 80%;
+      background: #fff;
+      z-index: 3000;
+      box-shadow: 2px 0 8px rgba(0,0,0,0.2);
+      overflow-y: auto;
+      padding: 16px;
+      transform: translateX(-100%);
+      transition: transform 0.3s ease-in-out;
+    }
+
+    #filter-pane.open {
+      transform: translateX(0);
+    }
+    .close-filter-pane {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      cursor: pointer;
+      font-size: 1.5em;
+      font-weight: bold;
+      color: #333;
+    }
+
+    /* RIGHT DETAILS PANE (Agency Info) */
+    #details-pane {
+      position: fixed;
+      top: 0;
+      bottom: 0;
+      right: 0;
+      width: 450px;
+      background: #fff;
+      z-index: 2000;
+      box-shadow: -2px 0 8px rgba(0,0,0,0.2);
+      overflow-y: auto;
+      padding: 16px;
+      transform: translateX(100%);
+      transition: transform 0.3s ease-in-out;
+    }
+    #details-pane.open {
+      transform: translateX(0);
+    }
+    @media (max-width: 900px) {
+      #details-pane {
+        width: 92%;
+      }
+    }
+    .close-pane {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      cursor: pointer;
+      font-size: 1.5em;
+      font-weight: bold;
+      color: #333;
+    }
+
+    /* Agency, phone, address */
+    .agency-name {
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 4px;
+    }
+    .agency-address {
+      margin-bottom: 4px;
+      text-align: center;
+    }
+    .agency-phone {
+      margin-bottom: 8px;
+      text-align: center;
+    }
+
+    /* Table, button, etc. */
+    table.pantry-table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-top: 8px;
+    }
+    table.pantry-table th, table.pantry-table td {
+      border: 1px solid #ccc;
+      padding: 4px;
+      font-size: 0.9em;
+      text-align: left;
+    }
+    table.pantry-table thead {
+      background-color: #f0f0f0;
+    }
+    .button-container {
+      display: flex;
+      justify-content: center;
+      margin: 12px 0;
+      padding-bottom: 25px;
+    }
+    #directions-button {
+      padding: 8px 16px;
+      font-size: 1em;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    #directions-button:hover {
+      background-color: #0056b3;
+    }
+
+    /* FILTERS */
+    .filters { margin: 12px 0; }
+    .filter-section { margin-bottom: 12px; }
+    .search-input {
+      margin-bottom: 8px;
+      margin-top: 5px;
+      padding: 6px;
+      width: 80%;
+      max-width: 300px;
+      box-sizing: border-box;
+    }
+
+    /* SITE MARKERS */
+    .site-marker {
+      width: 16px;
+      height: 16px;
+      border: 2px solid #333;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+    @media (max-width: 900px) {
+      .site-marker {
+        width: 18px !important;
+        height: 18px !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- MAP -->
+  <div id="map"></div>
+
+  <!-- LEGEND pinned -->
+<!-- LEGEND pinned at bottom-left of map -->
+<div id="legend">
+  <div class="legend-item">
+    <div class="color-box" style="background-color: #FFA500;"></div> Multi-Day
+  </div>
+  <div class="legend-item">
+    <div class="color-box" style="background-color: #FF0000;"></div> Sunday
+  </div>
+  <div class="legend-item">
+    <div class="color-box" style="background-color: #f1a2a2;"></div> Monday
+  </div>
+  <div class="legend-item">
+    <div class="color-box" style="background-color: #FFFF00;"></div> Tuesday
+  </div>
+  <div class="legend-item">
+    <div class="color-box" style="background-color: #4CBB17;"></div> Wednesday
+  </div>
+  <div class="legend-item">
+    <div class="color-box" style="background-color: #0000FF;"></div> Thursday
+  </div>
+  <div class="legend-item">
+    <div class="color-box" style="background-color: #4B0082;"></div> Friday
+  </div>
+  <div class="legend-item">
+    <div class="color-box" style="background-color: #8F00FF;"></div> Saturday
+  </div>
+</div>
+
+  <!-- FILTER BUTTON (top-left) -->
+  <button id="filter-button">Filters</button>
+
+  <!-- LEFT FILTER OVERLAY -->
+  <div id="filter-pane">
+    <div class="close-filter-pane" onclick="closeFilterPane()">X</div>
+    <h2>Filter Results</h2>
+    <div class="filters">
+      <div class="filter-section">
+              <!-- Open Now (Weekly only) -->
+      <div class="filter-section">
+        <strong>Status</strong><br />
+        <label><input type="checkbox" id="open-now-checkbox" /> Open Now</label>
+        <strong></strong><br />
+      </div>
+
+        <strong>Filter by Day of the Week:</strong><br />
+        <label><input type="checkbox" class="day-filter" value="Monday" /> Monday</label><br />
+        <label><input type="checkbox" class="day-filter" value="Tuesday" /> Tuesday</label><br />
+        <label><input type="checkbox" class="day-filter" value="Wednesday" /> Wednesday</label><br />
+        <label><input type="checkbox" class="day-filter" value="Thursday" /> Thursday</label><br />
+        <label><input type="checkbox" class="day-filter" value="Friday" /> Friday</label><br />
+        <label><input type="checkbox" class="day-filter" value="Saturday" /> Saturday</label><br />
+        <label><input type="checkbox" class="day-filter" value="Sunday" /> Sunday</label>
+      </div>
+
+      
+      <div class="filter-section">
+        <strong>Search by ZIP code:</strong><br />
+        <input
+          type="text"
+          id="zip-search"
+          class="search-input"
+          placeholder="Enter ZIP"
+        />
+      </div>
+
+      <!-- Agency Name Search -->
+      <div class="filter-section">
+        <strong>Search by Agency Name:</strong><br />
+        <input
+          type="text"
+          id="agency-search"
+          class="search-input"
+          placeholder="Enter Agency Name"
+        />
+      </div>
+
+    </div>
+  </div>
+
+  <!-- RIGHT DETAILS PANE (Agency Info) -->
+  <div id="details-pane">
+    <div class="close-pane" onclick="closeDetailsPane()">X</div>
+    <div id="details-content">
+      <p>Click a marker to view details.</p>
+    </div>
+  </div>
+
+  <script>
+    // Mapbox token 
+    mapboxgl.accessToken = "pk.eyJ1IjoiYXJuYXZrcmlzaG5hIiwiYSI6ImNtNXlhc285dTBoNGwybnB4NDRyZ2phNXgifQ.Q1UhzlIAHhPma35DGkdEeg";
+
+    let allData = [], filteredData = [];
+    let allLocations = {};  // Stores all data grouped by lat/lng (unfiltered)
+
+    let markers = [];
+    let highlighted = null;
+
+    // Create map
+    const map = new mapboxgl.Map({
+      container: "map",
+      style: "mapbox://styles/mapbox/streets-v11",
+      center: [-74.0060, 40.7128],
+      zoom: 12
+    });
+
+    // Add Fullscreen button
+    map.addControl(new mapboxgl.FullscreenControl());
+
+    // Attempt geolocation
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const { latitude, longitude } = pos.coords;
+          map.setCenter([longitude, latitude]);
+          map.setZoom(14);
+          new mapboxgl.Marker({ color: "#007BFF" })
+            .setLngLat([longitude, latitude])
+            .addTo(map);
+            // Force the user marker to be on top:
+            userMarker.getElement().style.zIndex = 9999;
+        },
+        (err) => {
+          console.warn("Geolocation error:", err);
+        }
+      );
+    }
+
+    // Load CSV
+    const csvUrl = "https://fbnycpublic.blob.core.windows.net/mapdata/customsearch_agency_map_data.csv?sv=2022-11-02&ss=bfqt&srt=sco&sp=rptfx&se=2050-01-18T03:56:20Z&st=2025-01-17T19:56:20Z&spr=https&sig=u41iVNckMwY%2Fkx76wPlA6CfSUzP9Ls4PUijuBfSsWAY%3D";
+    Papa.parse(csvUrl, {
+    download: true,
+    header: true,
+    complete: (results) => {
+        // 1) Keep only active rows
+        allData = results.data.filter(row => row["Inactive"] === "No");
+
+        // 2) EXCLUDE pantry bag distributions for the *prepared meals* map
+        const pantryMeals = allData.filter(r =>
+        r["Meal Type"]?.toLowerCase().includes("pantry bag")
+        );
+
+        // 3) Group all data by location (always use the full set for details pane)
+        allLocations = groupByLocation(allData);
+
+        // 4) Use ONLY preparedMeals when drawing this map
+        filteredData = pantryMeals;
+
+        // 5) Draw!
+        addMarkers(filteredData);
+    }
+    });
+
+
+    // Group rows by lat/lng => object { "lat,lng": [rows...] }
+    function groupByLocation(rows) {
+      const obj = {};
+      rows.forEach((r) => {
+        const lat = parseFloat(r["Latitude"] || "0").toFixed(8);
+        const lng = parseFloat(r["Longitude"] || "0").toFixed(8);
+        const key = `${lat},${lng}`;
+        if (!obj[key]) obj[key] = [];
+        obj[key].push(r);
+      });
+      return obj;
+    }
+
+    // Create markers based on filteredData
+    function addMarkers(data) {
+      // remove old markers
+      markers.forEach((m) => m.marker.remove());
+      markers = [];
+
+      // Group the *filtered* data to decide which markers appear
+      const subset = groupByLocation(data);
+
+      // For each location in the filtered subset
+      for (const locationKey in subset) {
+        const agencies = subset[locationKey];
+        const [lat, lng] = locationKey.split(",").map(parseFloat);
+        if (isNaN(lat) || isNaN(lng)) continue;
+
+        // Decide marker color based on meal type(s)
+        const color = getColorForGroup(agencies);
+
+        // Create a marker element
+        const el = document.createElement("div");
+        el.className = "site-marker";
+        el.style.backgroundColor = color;
+
+        // Add to map
+        const marker = new mapboxgl.Marker(el)
+          .setLngLat([lng, lat])
+          .addTo(map);
+
+        markers.push({ marker, color, el, locationKey });
+
+        // On click, show details for the *unfiltered* data at this location
+        el.addEventListener("click", () => {
+          toggleMarker(marker, color, locationKey);
+        });
+      }
+    }
+
+    // If multiple distinct meal types => #FFA500 (Multi-Service), else color by single meal type
+    function getColorForGroup(agencies) {
+      const mealTypes = new Set();
+      agencies.forEach((a) => {
+        const mt = (a["Meal Type"] || "Pantry Bag Distribution").toLowerCase();
+        mealTypes.add(mt);
+      });
+      if (mealTypes.size > 1) {
+        return "#FFA500"; // Multi-Service
+      } else {
+        // Only one meal type
+        return getMealColor(agencies[0]["Meal Type"]);
+      }
+    }
+
+// If multiple distinct days => Multi-Day color, else day-specific color
+function getColorForGroup(agencies) {
+  const days = new Set(
+    agencies.map(a => (a["Day of the Week"] || "").trim().toLowerCase())
+  );
+  if (days.size > 1) {
+    return "#FFA500";  // matches your “Multi-Day” legend box
+  }
+  // exactly one day
+  const day = [...days][0];
+  return getDayColor(day);
+}
+
+// Map a single day to its color
+function getDayColor(day) {
+  switch (day) {
+    case "sunday":    return "#FF0000";
+    case "monday":    return "#ff7d7d";
+    case "tuesday":   return "#FFFF00";
+    case "wednesday": return "#4CBB17";
+    case "thursday":  return "#0000FF";
+    case "friday":    return "#4B0082";
+    case "saturday":  return "#8F00FF";
+    default:          return "#CCCCCC"; // fallback / unknown
+  }
+}
+
+
+    // Toggle highlight
+    function toggleMarker(marker, originalColor, locationKey) {
+      if (highlighted && highlighted.marker === marker) {
+        revertHighlight();
+        closeDetailsPane();
+      } else {
+        revertHighlight();
+        highlightMarker(marker, originalColor);
+
+        // IMPORTANT: show details for ALL rows at that location, ignoring filters
+        const fullAgencies = allLocations[locationKey] || [];
+          const preparedAgencies = fullAgencies.filter(r =>
+        !r["Meal Type"]?.toLowerCase().includes("pantry bag")
+        );
+        openDetailsPane(fullAgencies);
+      }
+    }
+
+    function highlightMarker(marker, originalColor) {
+      const el = marker.getElement();
+      el.style.width = "24px";
+      el.style.height = "24px";
+      el.style.backgroundColor = "#FF3333";
+      el.style.border = "2px solid #FFF";
+      highlighted = { marker, el, color: originalColor };
+    }
+
+    function revertHighlight() {
+      if (!highlighted) return;
+      highlighted.el.style.width = "16px";
+      highlighted.el.style.height = "16px";
+      highlighted.el.style.backgroundColor = highlighted.color;
+      highlighted.el.style.border = "2px solid #333";
+      highlighted = null;
+    }
+
+    // DETAILS PANE
+    const detailsPane = document.getElementById("details-pane");
+    const detailsContent = document.getElementById("details-content");
+
+    let startX = 0;
+    detailsPane.addEventListener("touchstart", (e) => {
+      startX = e.touches[0].clientX;
+    }, { passive: true });
+    detailsPane.addEventListener("touchmove", (e) => {
+      const currentX = e.touches[0].clientX;
+      const diff = currentX - startX;
+      if (diff > 50) {
+        closeDetailsPane();
+      }
+    }, { passive: true });
+
+    function openDetailsPane(agencies) {
+      detailsContent.innerHTML = buildAgencyHTML(agencies);
+      detailsPane.classList.add("open");
+    }
+    function closeDetailsPane() {
+      detailsPane.classList.remove("open");
+    }
+
+    // Build details table (shows all days/hours for the location)
+    function buildAgencyHTML(agencies) {
+      if (!agencies.length) return "<p>No agency data.</p>";
+
+      // Sort by day-of-week -> meal type
+      const dayOrder = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+      agencies.sort((a,b) => {
+        const d = dayOrder.indexOf(a["Day of the Week"]) - dayOrder.indexOf(b["Day of the Week"]);
+        if (d !== 0) return d;
+        return (a["Meal Type"]||"").localeCompare(b["Meal Type"]||"");
+      });
+
+      const first = agencies[0];
+      const agencyName = first["Agency"]?.split(":")[1]?.trim() || first["Agency"] || "";
+      const address1 = first["Address 1"] || "";
+      const address4 = first["Address 4"] || "";
+      const phone = first["Phone"] || "";
+      const fullAddress = `${address1}, ${address4}${agencyName ? ", " + agencyName : ""}`.trim();
+
+      let rows = "";
+      agencies.forEach((r) => {
+        rows += `
+          <tr>
+            <td>${r["Day of the Week"] || ""}</td>
+            <td>${r["Meal Type"] || ""}</td>
+            <td>${r["Frequency"] || ""}</td>
+            <td>${r["Opening Hour"] || ""}</td>
+            <td>${r["Closing Hour"] || ""}</td>
+          </tr>
+        `;
+      });
+
+      return `
+        <div class="agency-name">${agencyName}</div>
+        <div class="agency-address">${address1}</div>
+        <div class="agency-address">${address4}</div>
+        <div class="agency-phone">${phone}</div>
+        <div class="button-container">
+          <button id="directions-button" onclick="getDirections('${fullAddress}')">Get Directions</button>
+        </div>
+        <table class="pantry-table">
+          <thead>
+            <tr>
+              <th>Day</th>
+              <th>Meal Type</th>
+              <th>Frequency</th>
+              <th>Open</th>
+              <th>Close</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      `;
+    }
+
+    function getDirections(addr) {
+      const encoded = encodeURIComponent(addr);
+      window.open(`https://www.google.com/maps/search/?api=1&query=${encoded}`, "_blank");
+    }
+
+    // FILTER PANE
+    const filterPane = document.getElementById("filter-pane");
+    const filterButton = document.getElementById("filter-button");
+    filterButton.addEventListener("click", openFilterPane);
+
+    function openFilterPane() {
+      filterPane.classList.add("open");
+    }
+    function closeFilterPane() {
+      filterPane.classList.remove("open");
+    }
+
+    let filterStartX = 0;
+    filterPane.addEventListener("touchstart", (e) => {
+      filterStartX = e.touches[0].clientX;
+    }, { passive: true });
+    filterPane.addEventListener("touchmove", (e) => {
+      const currentX = e.touches[0].clientX;
+      const diff = filterStartX - currentX;
+      if (diff > 50) {
+        closeFilterPane();
+      }
+    }, { passive: true });
+
+    // Filter UI elements
+    const zipInput = document.getElementById("zip-search");
+    zipInput.addEventListener("input", applyFilters);
+
+    const agencyInput = document.getElementById("agency-search");
+    agencyInput.addEventListener("input", applyFilters);
+
+    document.querySelectorAll(".day-filter, .meal-filter").forEach((cb) => {
+      cb.addEventListener("change", applyFilters);
+    });
+
+    const openNowCb = document.getElementById("open-now-checkbox");
+    openNowCb.addEventListener("change", applyFilters);
+
+    // Apply filters to produce a new 'filteredData' array, then re-draw markers
+    function applyFilters() {
+      const zipVal = zipInput.value.trim();
+      const agencyVal = agencyInput.value.trim().toLowerCase();
+      const selectedDays = Array.from(document.querySelectorAll(".day-filter:checked")).map((cb) => cb.value);
+      const selectedMeals = Array.from(document.querySelectorAll(".meal-filter:checked")).map((cb) => cb.value);
+      const isOpenNow = openNowCb.checked;
+
+      // Build day name for today's date
+      const todayDayName = new Date().toLocaleString("en-US", { weekday: "long" });
+      const nowMinutes = getNowInMinutes();
+
+      filteredData = allData.filter((row) => {
+        const day = (row["Day of the Week"] || "").trim();
+        const meal = (row["Meal Type"] || "Pantry Bag Distribution").trim();
+        const zipField = (row["Address 4"] || "").trim();
+        const agencyField = (row["Agency"] || "").toLowerCase();
+
+        const zipCheck = !zipVal || zipField.includes(zipVal);
+        const dayCheck = (selectedDays.length === 0) || selectedDays.includes(day);
+        const mealCheck = (selectedMeals.length === 0) || selectedMeals.includes(meal);
+        const agencyCheck = !agencyVal || agencyField.includes(agencyVal);
+
+        // If "Open Now" is checked => must meet these:
+        // 1) Frequency = "Weekly"
+        // 2) day == today's day
+        // 3) current time between Opening & Closing
+        let openNowCheck = true;
+        if (isOpenNow) {
+          openNowCheck = false;
+          if (row["Frequency"] === "Weekly" && day === todayDayName) {
+            // parse times
+            const openTime = parseTime12Hr(row["Opening Hour"]);
+            const closeTime = parseTime12Hr(row["Closing Hour"]);
+            if (openTime !== null && closeTime !== null) {
+              // now must be >= openTime and < closeTime
+              if (nowMinutes >= openTime && nowMinutes < closeTime) {
+                openNowCheck = true;
+              }
+            }
+          }
+        }
+
+        return zipCheck && dayCheck && mealCheck && agencyCheck && openNowCheck;
+      });
+
+      addMarkers(filteredData);
+
+      // Clear any highlight or detail pane
+      revertHighlight();
+      closeDetailsPane();
+    }
+
+    // Returns minutes after midnight for the current local time
+    function getNowInMinutes() {
+      const now = new Date();
+      return now.getHours() * 60 + now.getMinutes();
+    }
+
+    // Parse "8:30 AM" or "2:00 PM" -> minutes after midnight
+    // If your times are 24-hour format, adapt accordingly
+    function parseTime12Hr(timeStr) {
+      if (!timeStr) return null;
+      // e.g. "8:30 AM" or "2:00 PM"
+      const parts = timeStr.trim().split(" ");
+      if (parts.length < 2) return null;
+      let [timePart, ampm] = parts;
+      let [hourStr, minuteStr] = timePart.split(":");
+      let hour = parseInt(hourStr, 10);
+      let minute = parseInt(minuteStr, 10) || 0;
+      ampm = ampm.toUpperCase();
+
+      if (ampm === "PM" && hour < 12) {
+        hour += 12;
+      } else if (ampm === "AM" && hour === 12) {
+        hour = 0;
+      }
+      return hour * 60 + minute;
+    }
+  </script>
+</body>
+</html>
