@@ -324,6 +324,7 @@
     mapboxgl.accessToken = "pk.eyJ1IjoiYXJuYXZrcmlzaG5hIiwiYSI6ImNtNXlhc285dTBoNGwybnB4NDRyZ2phNXgifQ.Q1UhzlIAHhPma35DGkdEeg";
 
     let allData = [], filteredData = [];
+    let preparedOnly = [];
     let allLocations = {};  // Stores all data grouped by lat/lng (unfiltered)
 
     let markers = [];
@@ -368,16 +369,16 @@ Papa.parse(csvUrl, {
     // 1) Keep only active rows
     allData = results.data.filter(row => row["Inactive"] === "No");
 
-    // 2) EXCLUDE pantry bag distributions for the *prepared meals* map
-    const preparedMeals = allData.filter(r =>
+    // 2) Build prepared-meals dataset (everything *except* pantry)
+    preparedOnly = allData.filter(r =>
       !r["Meal Type"]?.toLowerCase().includes("pantry bag")
     );
 
     // 3) Group all data by location (always use the full set for details pane)
     allLocations = groupByLocation(allData);
 
-    // 4) Use ONLY preparedMeals when drawing this map
-    filteredData = preparedMeals;
+    // 4) Draw only prepared-meal sites
+    filteredData = preparedOnly;
 
     // 5) Draw!
     addMarkers(filteredData);
@@ -632,7 +633,7 @@ Papa.parse(csvUrl, {
       const todayDayName = new Date().toLocaleString("en-US", { weekday: "long" });
       const nowMinutes = getNowInMinutes();
 
-      filteredData = allData.filter((row) => {
+      filteredData = preparedOnly.filter((row) => {
         const day = (row["Day of the Week"] || "").trim();
         const meal = (row["Meal Type"] || "Pantry Bag Distribution").trim();
         const zipField = (row["Address 4"] || "").trim();
@@ -663,7 +664,7 @@ Papa.parse(csvUrl, {
           }
         }
 
-        return zipCheck && dayCheck && mealCheck && agencyCheck && openNowCheck;
+        return zipCheck && dayCheck && agencyCheck && openNowCheck;
       });
 
       addMarkers(filteredData);

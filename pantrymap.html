@@ -330,6 +330,7 @@
     mapboxgl.accessToken = "pk.eyJ1IjoiYXJuYXZrcmlzaG5hIiwiYSI6ImNtNXlhc285dTBoNGwybnB4NDRyZ2phNXgifQ.Q1UhzlIAHhPma35DGkdEeg";
 
     let allData = [], filteredData = [];
+    let pantryOnly = [];
     let allLocations = {};  // Stores all data grouped by lat/lng (unfiltered)
 
     let markers = [];
@@ -374,6 +375,11 @@
         // 1) Keep only active rows
         allData = results.data.filter(row => row["Inactive"] === "No");
 
+        // 2) Build pantry-only dataset
+        pantryOnly = allData.filter(r =>
+        r["Meal Type"]?.toLowerCase().includes("pantry bag")
+        );
+
         // 2) EXCLUDE pantry bag distributions for the *prepared meals* map
         const pantryMeals = allData.filter(r =>
         r["Meal Type"]?.toLowerCase().includes("pantry bag")
@@ -382,8 +388,8 @@
         // 3) Group all data by location (always use the full set for details pane)
         allLocations = groupByLocation(allData);
 
-        // 4) Use ONLY preparedMeals when drawing this map
-        filteredData = pantryMeals;
+        // 4) Draw only pantry sites
+        filteredData = pantryOnly;
 
         // 5) Draw!
         addMarkers(filteredData);
@@ -546,6 +552,10 @@ function getDayColor(day) {
 
     // Build details table (shows all days/hours for the location)
     function buildAgencyHTML(agencies) {
+      // keep only pantry-bag distributions
+      agencies = agencies.filter(r =>
+      r["Meal Type"]?.toLowerCase().includes("pantry bag")
+      );
       if (!agencies.length) return "<p>No agency data.</p>";
 
       // Sort by day-of-week -> meal type
@@ -654,7 +664,7 @@ function getDayColor(day) {
       const todayDayName = new Date().toLocaleString("en-US", { weekday: "long" });
       const nowMinutes = getNowInMinutes();
 
-      filteredData = allData.filter((row) => {
+      filteredData = pantryOnly.filter((row) => {
         const day = (row["Day of the Week"] || "").trim();
         const meal = (row["Meal Type"] || "Pantry Bag Distribution").trim();
         const zipField = (row["Address 4"] || "").trim();
