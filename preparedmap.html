@@ -357,13 +357,13 @@
       }
       if (accuracy > maxAcc) return;
 
-        // 2) DROP TINY MOVES: only update if moved more than 3m
+        // 2) DROP TINY MOVES: only update if moved more than 2m
         if (lastPos) {
           const dist = getDistanceMeters(
             lastPos.latitude, lastPos.longitude,
             latitude, longitude
           );
-          if (dist < 3) {
+          if (dist < 2) {
             return;
           }
         }
