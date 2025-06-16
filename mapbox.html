@@ -330,6 +330,12 @@
 
     let markers = [];
     let highlighted = null;
+    // holds the single “you” marker
+    let userMarker;
+
+    // remembers last accepted position
+    let lastPos = null;
+
 
     // Create map
     const map = new mapboxgl.Map({
@@ -342,24 +348,65 @@
     // Add Fullscreen button
     map.addControl(new mapboxgl.FullscreenControl());
 
-    // Attempt geolocation
-    if ("geolocation" in navigator) {
-      navigator.geolocation.getCurrentPosition(
+      navigator.geolocation.watchPosition(
         (pos) => {
-          const { latitude, longitude } = pos.coords;
-          map.setCenter([longitude, latitude]);
-          map.setZoom(14);
-          new mapboxgl.Marker({ color: "#007BFF" })
-            .setLngLat([longitude, latitude])
-            .addTo(map);
-            // Force the user marker to be on top:
-            userMarker.getElement().style.zIndex = 9999;
+          const { latitude, longitude, accuracy } = pos.coords;
+
+          // base threshold
+          let maxAcc = 50;
+
+          // if the device says its accuracy is already great, let it through
+          // but if it’s poor, enforce the threshold
+          if (accuracy <= 15) {
+            maxAcc = 15;
+          }
+          if (accuracy > maxAcc) return;
+
+          // 2) ignore small moves (<2 meters)
+          if (lastPos) {
+            const dist = getDistanceMeters(
+              lastPos.latitude, lastPos.longitude,
+              latitude, longitude
+            );
+            if (dist < 2) return;
+          }
+
+          // 3) remember this good position
+          lastPos = { latitude, longitude };
+
+          // 4) update (or create) your marker
+          if (userMarker) {
+            userMarker.setLngLat([longitude, latitude]);
+          } else {
+            map.setCenter([longitude, latitude]);
+            map.setZoom(14);
+            userMarker = new mapboxgl.Marker({ color: "#007BFF" })
+              .setLngLat([longitude, latitude])
+              .addTo(map);
+          }
         },
-        (err) => {
-          console.warn("Geolocation error:", err);
+        (err) => console.warn("Geolocation error:", err),
+        {
+          enableHighAccuracy: true,
+          maximumAge: 0,
+          timeout: 5000,
         }
       );
-    }
+
+            /**
+      * Returns straight-line distance in meters between two lat/lngs
+      */
+      function getDistanceMeters(lat1, lon1, lat2, lon2) {
+        const toRad = d => d * Math.PI / 180;
+        const R = 6371000; // Earth’s radius in meters
+        const φ1 = toRad(lat1), φ2 = toRad(lat2);
+        const Δφ = toRad(lat2 - lat1), Δλ = toRad(lon2 - lon1);
+        const a = Math.sin(Δφ/2)**2 +
+                  Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2)**2;
+        return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+      }
+
+
 
     // Load CSV
     const csvUrl = "https://fbnycpublic.blob.core.windows.net/mapdata/customsearch_agency_map_data.csv?sv=2022-11-02&ss=bfqt&srt=sco&sp=rptfx&se=2050-01-18T03:56:20Z&st=2025-01-17T19:56:20Z&spr=https&sig=u41iVNckMwY%2Fkx76wPlA6CfSUzP9Ls4PUijuBfSsWAY%3D";
