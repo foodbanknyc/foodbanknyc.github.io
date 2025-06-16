@@ -347,16 +347,23 @@
       (pos) => {
         const { latitude, longitude, accuracy } = pos.coords;
 
-        // 1) DROP POOR FIXES: ignore if accuracy worse than 50m
-        if (accuracy > 50) return;
+      // base threshold
+      let maxAcc = 50;
 
-        // 2) DROP TINY MOVES: only update if moved more than 5m
+      // if the device says its accuracy is already great, let it through
+      // but if it’s poor, enforce the threshold
+      if (accuracy <= 15) {
+        maxAcc = 15;
+      }
+      if (accuracy > maxAcc) return;
+
+        // 2) DROP TINY MOVES: only update if moved more than 3m
         if (lastPos) {
           const dist = getDistanceMeters(
             lastPos.latitude, lastPos.longitude,
             latitude, longitude
           );
-          if (dist < 5) {
+          if (dist < 3) {
             return;
           }
         }
