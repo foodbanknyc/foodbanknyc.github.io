@@ -341,38 +341,15 @@
     // Add Fullscreen button
     map.addControl(new mapboxgl.FullscreenControl());
 
-// Attempt continuous geolocation
-if ("geolocation" in navigator) {
-  // keep this at top-level so we can move it later
-  let userMarker;
-
-  navigator.geolocation.watchPosition(
-    (pos) => {
-      const { latitude, longitude } = pos.coords;
-
-      if (userMarker) {
-        // just move the existing marker
-        userMarker.setLngLat([longitude, latitude]);
-      } else {
-        // first time: center + zoom + create marker
-        map.setCenter([longitude, latitude]);
-        map.setZoom(14);
-        userMarker = new mapboxgl.Marker({ color: "#007BFF" })
-          .setLngLat([longitude, latitude])
-          .addTo(map);
-      }
-    },
-    (err) => {
-      console.warn("Geolocation error:", err);
-    },
-    {
-      enableHighAccuracy: true,
-      maximumAge: 0,
-      timeout: 5000,
-    }
-  );
-}
-
+map.addControl(
+  new mapboxgl.GeolocateControl({
+    positionOptions: { enableHighAccuracy: true },
+    trackUserLocation: true,     // dot follows you as you move
+    showUserHeading: true,       // optional compass arrow
+    showAccuracyCircle: false    // hides wide accuracy halo
+  }),
+  'top-right'                   // place the button in the top-right
+);
 
     // Load CSV
     const csvUrl = "https://fbnycpublic.blob.core.windows.net/mapdata/customsearch_agency_map_data.csv?sv=2022-11-02&ss=bfqt&srt=sco&sp=rptfx&se=2050-01-18T03:56:20Z&st=2025-01-17T19:56:20Z&spr=https&sig=u41iVNckMwY%2Fkx76wPlA6CfSUzP9Ls4PUijuBfSsWAY%3D";
