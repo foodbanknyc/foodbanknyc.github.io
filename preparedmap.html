@@ -73,10 +73,15 @@
       border: 1px solid #333;
     }
 
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.15); }
+}
+
     /* FILTER BUTTON in top-left corner */
     #filter-button {
       position: absolute;
-      top: 70px;
+      top: 25px;
       left: 25px;
       z-index: 1100;
       background-color: #ffffff;
@@ -87,26 +92,12 @@
       cursor: pointer;
       font-size: 1em;
       font-weight: bold;
+      box-shadow: 0 0 15px rgba(122, 36, 2, 0.6);
+      transition: box-shadow 0.1s;
+      animation: pulse 2s ease-in-out 3;
     }
     #filter-button:hover {
       background-color: #d3e6f0;
-    }
-
-    /* ON-MAP "Open Now" control */
-    #map-open-now-control {
-      position: absolute;
-      top: 25px;    /* just below the Filters button */
-      left: 25px;   /* align with Filters button */
-      z-index: 1100;
-      background: #fff;
-      padding: 6px 10px;
-      border: 2px solid #333;
-      border-radius: 4px;
-      font-size: 0.9em;
-    }
-    #map-open-now-control label {
-      cursor: pointer;
-      user-select: none;
     }
 
     /* LEFT FILTER OVERLAY */
@@ -220,7 +211,7 @@
       background-color: #0056b3;
     }
 
-    /* FILTERS in pane */
+    /* FILTERS */
     .filters { margin: 12px 0; }
     .filter-section { margin-bottom: 12px; }
     .search-input {
@@ -255,30 +246,36 @@
 
   <!-- LEGEND pinned -->
   <div id="legend">
-    <div class="legend-item"><div class="color-box" style="background-color: #FFA500;"></div> Multi-Service</div>
-    <div class="legend-item"><div class="color-box" style="background-color: #c04343;"></div> Breakfast</div>
-    <div class="legend-item"><div class="color-box" style="background-color: #3CB371;"></div> Lunch</div>
-    <div class="legend-item"><div class="color-box" style="background-color: #4682B4;"></div> Dinner</div>
+    <div class="legend-item">
+      <div class="color-box" style="background-color: #FFA500;"></div> Multi-Service
+    </div>
+
+    <div class="legend-item">
+      <div class="color-box" style="background-color: #c04343;"></div> Breakfast
+    </div>
+    <div class="legend-item">
+      <div class="color-box" style="background-color: #3CB371;"></div> Lunch
+    </div>
+    <div class="legend-item">
+      <div class="color-box" style="background-color: #4682B4;"></div> Dinner
+    </div>
   </div>
 
   <!-- FILTER BUTTON (top-left) -->
   <button id="filter-button">Filters</button>
-
-  <!-- ON-MAP "Open Now" control (under Filters button) -->
-  <div id="map-open-now-control">
-    <label><input type="checkbox" id="map-open-now-checkbox" /> Open Now</label>
-  </div>
 
   <!-- LEFT FILTER OVERLAY -->
   <div id="filter-pane">
     <div class="close-filter-pane" onclick="closeFilterPane()">X</div>
     <h2>Filter Results</h2>
     <div class="filters">
-      <!-- Open Now -->
+            <!-- Open Now (Weekly only) -->
       <div class="filter-section">
         <strong>Status</strong><br />
-        <label><input type="checkbox" id="open-now-checkbox" /> Open Now</label><br />
+        <label><input type="checkbox" id="open-now-checkbox" /> Open Now</label>
+        <strong></strong><br />
       </div>
+      
       <div class="filter-section">
         <strong>Filter by Day of the Week:</strong><br />
         <label><input type="checkbox" class="day-filter" value="Monday" /> Monday</label><br />
@@ -289,54 +286,100 @@
         <label><input type="checkbox" class="day-filter" value="Saturday" /> Saturday</label><br />
         <label><input type="checkbox" class="day-filter" value="Sunday" /> Sunday</label>
       </div>
+
       <div class="filter-section">
         <strong>Filter by Meal Type:</strong><br />
         <label><input type="checkbox" class="meal-filter" value="Breakfast" /> Breakfast</label><br />
         <label><input type="checkbox" class="meal-filter" value="Lunch" /> Lunch</label><br />
         <label><input type="checkbox" class="meal-filter" value="Dinner" /> Dinner</label><br />
       </div>
+      
+
       <div class="filter-section">
         <strong>Search by ZIP code:</strong><br />
-        <input type="text" id="zip-search" class="search-input" placeholder="Enter ZIP" />
+        <input
+          type="text"
+          id="zip-search"
+          class="search-input"
+          placeholder="Enter ZIP"
+        />
       </div>
+
+      <!-- Agency Name Search -->
       <div class="filter-section">
         <strong>Search by Agency Name:</strong><br />
-        <input type="text" id="agency-search" class="search-input" placeholder="Enter Agency Name" />
+        <input
+          type="text"
+          id="agency-search"
+          class="search-input"
+          placeholder="Enter Agency Name"
+        />
       </div>
+
     </div>
   </div>
 
   <!-- RIGHT DETAILS PANE (Agency Info) -->
   <div id="details-pane">
     <div class="close-pane" onclick="closeDetailsPane()">X</div>
-    <div id="details-content"><p>Click a marker to view details.</p></div>
+    <div id="details-content">
+      <p>Click a marker to view details.</p>
+    </div>
   </div>
 
   <script>
+    // Mapbox token 
     mapboxgl.accessToken = "pk.eyJ1IjoiYXJuYXZrcmlzaG5hIiwiYSI6ImNtNXlhc285dTBoNGwybnB4NDRyZ2phNXgifQ.Q1UhzlIAHhPma35DGkdEeg";
 
-    let allData = [], preparedOnly = [], filteredData = [];
-    let allLocations = {}, markers = [], highlighted = null;
-    let userMarker, lastPos = null;
+    let allData = [], filteredData = [];
+    let preparedOnly = [];
+    let allLocations = {};  // Stores all data grouped by lat/lng (unfiltered)
 
+    let markers = [];
+    let highlighted = null;
+    let userMarker;
+    let lastPos = null;
+
+    // Create map
     const map = new mapboxgl.Map({
       container: "map",
       style: "mapbox://styles/mapbox/streets-v11",
       center: [-74.0060, 40.7128],
       zoom: 12
     });
+
+    // Add Fullscreen button
     map.addControl(new mapboxgl.FullscreenControl());
 
     navigator.geolocation.watchPosition(
-      pos => {
+      (pos) => {
         const { latitude, longitude, accuracy } = pos.coords;
-        let maxAcc = accuracy <= 15 ? 15 : 50;
-        if (accuracy > maxAcc) return;
+
+      // base threshold
+      let maxAcc = 50;
+
+      // if the device says its accuracy is already great, let it through
+      // but if it’s poor, enforce the threshold
+      if (accuracy <= 15) {
+        maxAcc = 15;
+      }
+      if (accuracy > maxAcc) return;
+
+        // 2) DROP TINY MOVES: only update if moved more than 2m
         if (lastPos) {
-          const dist = getDistanceMeters(lastPos.latitude, lastPos.longitude, latitude, longitude);
-          if (dist < 2) return;
+          const dist = getDistanceMeters(
+            lastPos.latitude, lastPos.longitude,
+            latitude, longitude
+          );
+          if (dist < 2) {
+            return;
+          }
         }
+
+        // 3) SAVE last good position
         lastPos = { latitude, longitude };
+
+        // 4) UPDATE (or CREATE) your marker
         if (userMarker) {
           userMarker.setLngLat([longitude, latitude]);
         } else {
@@ -347,13 +390,17 @@
             .addTo(map);
         }
       },
-      err => console.warn("Geolocation error:", err),
-      { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
+      (err) => console.warn("Geolocation error:", err),
+      {
+        enableHighAccuracy: true,
+        maximumAge: 0,
+        timeout: 5000,
+      }
     );
-
+    // Returns straight-line distance (meters) between two lat/lng points
     function getDistanceMeters(lat1, lon1, lat2, lon2) {
       const toRad = d => d * Math.PI / 180;
-      const R = 6371000;
+      const R = 6371000; // Earth’s radius in meters
       const φ1 = toRad(lat1), φ2 = toRad(lat2);
       const Δφ = toRad(lat2 - lat1), Δλ = toRad(lon2 - lon1);
       const a = Math.sin(Δφ/2)**2 +
@@ -361,24 +408,40 @@
       return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
     }
 
-    const csvUrl = "https://fbnycpublic.blob.core.windows.net/mapdata/customsearch_agency_map_data.csv?sv=2022-11-02&ss=bfqt&srt=sco&sp=rptfx&se=2050-01-18T03:56:20Z&st=2025-01-17T19:56:20Z&spr=https&sig=u41iVNckMwY%2Fkx76wPlA6CfSUzP9Ls4PUijuBfSsWAY%3D";
-    Papa.parse(csvUrl, {
-      download: true,
-      header: true,
-      complete: results => {
-        allData = results.data.filter(r => r["Inactive"]==="No");
-        preparedOnly = allData.filter(r => !r["Meal Type"].toLowerCase().includes("pantry bag"));
-        allLocations = groupByLocation(allData);
-        filteredData = preparedOnly;
-        addMarkers(filteredData);
-      }
-    });
 
+
+    // Load CSV
+    const csvUrl = "https://fbnycpublic.blob.core.windows.net/mapdata/customsearch_agency_map_data.csv?sv=2022-11-02&ss=bfqt&srt=sco&sp=rptfx&se=2050-01-18T03:56:20Z&st=2025-01-17T19:56:20Z&spr=https&sig=u41iVNckMwY%2Fkx76wPlA6CfSUzP9Ls4PUijuBfSsWAY%3D";
+Papa.parse(csvUrl, {
+  download: true,
+  header: true,
+  complete: (results) => {
+    // 1) Keep only active rows
+    allData = results.data.filter(row => row["Inactive"] === "No");
+
+    // 2) Build prepared-meals dataset (everything *except* pantry)
+    preparedOnly = allData.filter(r =>
+      !r["Meal Type"]?.toLowerCase().includes("pantry bag")
+    );
+
+    // 3) Group all data by location (always use the full set for details pane)
+    allLocations = groupByLocation(allData);
+
+    // 4) Draw only prepared-meal sites
+    filteredData = preparedOnly;
+
+    // 5) Draw!
+    addMarkers(filteredData);
+  }
+});
+
+
+    // Group rows by lat/lng => object { "lat,lng": [rows...] }
     function groupByLocation(rows) {
       const obj = {};
-      rows.forEach(r => {
-        const lat = parseFloat(r["Latitude"]||"0").toFixed(8);
-        const lng = parseFloat(r["Longitude"]||"0").toFixed(8);
+      rows.forEach((r) => {
+        const lat = parseFloat(r["Latitude"] || "0").toFixed(8);
+        const lng = parseFloat(r["Longitude"] || "0").toFixed(8);
         const key = `${lat},${lng}`;
         if (!obj[key]) obj[key] = [];
         obj[key].push(r);
@@ -386,150 +449,306 @@
       return obj;
     }
 
+    // Create markers based on filteredData
     function addMarkers(data) {
-      markers.forEach(m => m.marker.remove());
+      // remove old markers
+      markers.forEach((m) => m.marker.remove());
       markers = [];
+
+      // Group the *filtered* data to decide which markers appear
       const subset = groupByLocation(data);
-      for (const key in subset) {
-        const agencies = subset[key];
-        const [lat, lng] = key.split(",").map(parseFloat);
-        if (isNaN(lat)||isNaN(lng)) continue;
+
+      // For each location in the filtered subset
+      for (const locationKey in subset) {
+        const agencies = subset[locationKey];
+        const [lat, lng] = locationKey.split(",").map(parseFloat);
+        if (isNaN(lat) || isNaN(lng)) continue;
+
+        // Decide marker color based on meal type(s)
         const color = getColorForGroup(agencies);
+
+        // Create a marker element
         const el = document.createElement("div");
         el.className = "site-marker";
         el.style.backgroundColor = color;
-        const marker = new mapboxgl.Marker(el).setLngLat([lng, lat]).addTo(map);
-        markers.push({ marker, color, el, key });
-        el.addEventListener("click", () => toggleMarker(marker, color, key));
+
+        // Add to map
+        const marker = new mapboxgl.Marker(el)
+          .setLngLat([lng, lat])
+          .addTo(map);
+
+        markers.push({ marker, color, el, locationKey });
+
+        // On click, show details for the *unfiltered* data at this location
+        el.addEventListener("click", () => {
+          toggleMarker(marker, color, locationKey);
+        });
       }
     }
 
-    function getColorForGroup(ags) {
-      const set = new Set(ags.map(a => (a["Meal Type"]||"").toLowerCase()));
-      if (set.size>1) return "#FFA500";
-      return getMealColor(ags[0]["Meal Type"]);
+    // If multiple distinct meal types => #FFA500 (Multi-Service), else color by single meal type
+    function getColorForGroup(agencies) {
+      const mealTypes = new Set();
+      agencies.forEach((a) => {
+        const mt = (a["Meal Type"] || "Pantry Bag Distribution").toLowerCase();
+        mealTypes.add(mt);
+      });
+      if (mealTypes.size > 1) {
+        return "#FFA500"; // Multi-Service
+      } else {
+        // Only one meal type
+        return getMealColor(agencies[0]["Meal Type"]);
+      }
     }
-    function getMealColor(mt) {
-      const t = (mt||"").toLowerCase();
+
+    // Color by single meal type
+    function getMealColor(mealType) {
+      const t = (mealType || "").toLowerCase();
       if (t.includes("pantry bag")) return "#8A2BE2";
       if (t.includes("breakfast")) return "#c04343";
       if (t.includes("lunch")) return "#3CB371";
       if (t.includes("dinner")) return "#4682B4";
-      return "#FFA500";
+      return "#FFA500"; // fallback
     }
 
-    function toggleMarker(marker, origColor, key) {
-      if (highlighted && highlighted.marker===marker) {
-        revertHighlight(); closeDetailsPane();
+    // Toggle highlight
+    function toggleMarker(marker, originalColor, locationKey) {
+      if (highlighted && highlighted.marker === marker) {
+        revertHighlight();
+        closeDetailsPane();
       } else {
         revertHighlight();
-        highlightMarker(marker, origColor);
-        openDetailsPane(allLocations[key]||[]);
+        highlightMarker(marker, originalColor);
+
+        // IMPORTANT: show details for ALL rows at that location, ignoring filters
+        const fullAgencies = allLocations[locationKey] || [];
+        openDetailsPane(fullAgencies);
       }
     }
-    function highlightMarker(marker, origColor) {
+
+    function highlightMarker(marker, originalColor) {
       const el = marker.getElement();
-      el.style.width="24px"; el.style.height="24px";
-      el.style.backgroundColor="#FF3333"; el.style.border="2px solid #FFF";
-      highlighted={marker, el, color:origColor};
+      el.style.width = "24px";
+      el.style.height = "24px";
+      el.style.backgroundColor = "#FF3333";
+      el.style.border = "2px solid #FFF";
+      highlighted = { marker, el, color: originalColor };
     }
+
     function revertHighlight() {
       if (!highlighted) return;
-      highlighted.el.style.width="16px";
-      highlighted.el.style.height="16px";
-      highlighted.el.style.backgroundColor=highlighted.color;
-      highlighted.el.style.border="2px solid #333";
-      highlighted=null;
+      highlighted.el.style.width = "16px";
+      highlighted.el.style.height = "16px";
+      highlighted.el.style.backgroundColor = highlighted.color;
+      highlighted.el.style.border = "2px solid #333";
+      highlighted = null;
     }
 
-    const detailsPane = document.getElementById("details-pane"),
-          detailsContent = document.getElementById("details-content");
-    detailsPane.addEventListener("touchstart", e=>startX=e.touches[0].clientX,{passive:true});
-    detailsPane.addEventListener("touchmove", e=>{ if(e.touches[0].clientX-startX>50) closeDetailsPane(); },{passive:true});
-    function openDetailsPane(ags){ detailsContent.innerHTML=buildAgencyHTML(ags); detailsPane.classList.add("open"); }
-    function closeDetailsPane(){ detailsPane.classList.remove("open"); }
+    // DETAILS PANE
+    const detailsPane = document.getElementById("details-pane");
+    const detailsContent = document.getElementById("details-content");
 
-    function buildAgencyHTML(ags){
-      ags = ags.filter(r=>!r["Meal Type"].toLowerCase().includes("pantry bag"));
-      if(!ags.length) return "<p>No prepared‐meal data.</p>";
-      const dayOrder=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
-      ags.sort((a,b)=>{ const d=dayOrder.indexOf(a["Day of the Week"])-dayOrder.indexOf(b["Day of the Week"]); return d||((a["Meal Type"]||"").localeCompare(b["Meal Type"]||"")); });
-      const f=ags[0],
-            name=f["Agency"]?.split(":")[1]?.trim()||f["Agency"]||"",
-            a1=f["Address 1"]||"", a4=f["Address 4"]||"",
-            phone=f["Phone"]||"",
-            full=`${a1}, ${a4}${name?", "+name:""}`.trim();
-      let rows="";
-      ags.forEach(r=>rows+=`<tr><td>${r["Day of the Week"]||""}</td><td>${r["Meal Type"]||""}</td><td>${r["Frequency"]||""}</td><td>${r["Opening Hour"]||""}</td><td>${r["Closing Hour"]||""}</td></tr>`);
+    let startX = 0;
+    detailsPane.addEventListener("touchstart", (e) => {
+      startX = e.touches[0].clientX;
+    }, { passive: true });
+    detailsPane.addEventListener("touchmove", (e) => {
+      const currentX = e.touches[0].clientX;
+      const diff = currentX - startX;
+      if (diff > 50) {
+        closeDetailsPane();
+      }
+    }, { passive: true });
+
+    function openDetailsPane(agencies) {
+      detailsContent.innerHTML = buildAgencyHTML(agencies);
+      detailsPane.classList.add("open");
+    }
+    function closeDetailsPane() {
+      detailsPane.classList.remove("open");
+    }
+
+    // Build details table (shows all days/hours for the location)
+    function buildAgencyHTML(agencies) {
+          agencies = agencies.filter(r =>
+    !r["Meal Type"]?.toLowerCase().includes("pantry bag")
+  );
+
+  if (!agencies.length) return "<p>No prepared‐meal data.</p>";
+      if (!agencies.length) return "<p>No agency data.</p>";
+
+      // Sort by day-of-week -> meal type
+      const dayOrder = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+      agencies.sort((a,b) => {
+        const d = dayOrder.indexOf(a["Day of the Week"]) - dayOrder.indexOf(b["Day of the Week"]);
+        if (d !== 0) return d;
+        return (a["Meal Type"]||"").localeCompare(b["Meal Type"]||"");
+      });
+
+      const first = agencies[0];
+      const agencyName = first["Agency"]?.split(":")[1]?.trim() || first["Agency"] || "";
+      const address1 = first["Address 1"] || "";
+      const address4 = first["Address 4"] || "";
+      const phone = first["Phone"] || "";
+      const fullAddress = `${address1}, ${address4}${agencyName ? ", " + agencyName : ""}`.trim();
+
+      let rows = "";
+      agencies.forEach((r) => {
+        rows += `
+          <tr>
+            <td>${r["Day of the Week"] || ""}</td>
+            <td>${r["Meal Type"] || ""}</td>
+            <td>${r["Frequency"] || ""}</td>
+            <td>${r["Opening Hour"] || ""}</td>
+            <td>${r["Closing Hour"] || ""}</td>
+          </tr>
+        `;
+      });
+
       return `
-        <div class="agency-name">${name}</div>
-        <div class="agency-address">${a1}</div>
-        <div class="agency-address">${a4}</div>
+        <div class="agency-name">${agencyName}</div>
+        <div class="agency-address">${address1}</div>
+        <div class="agency-address">${address4}</div>
         <div class="agency-phone">${phone}</div>
         <div class="button-container">
-          <button id="directions-button" onclick="getDirections('${full}')">Get Directions</button>
+          <button id="directions-button" onclick="getDirections('${fullAddress}')">Get Directions</button>
         </div>
         <table class="pantry-table">
-          <thead><tr><th>Day</th><th>Meal Type</th><th>Frequency</th><th>Open</th><th>Close</th></tr></thead>
+          <thead>
+            <tr>
+              <th>Day</th>
+              <th>Meal Type</th>
+              <th>Frequency</th>
+              <th>Open</th>
+              <th>Close</th>
+            </tr>
+          </thead>
           <tbody>${rows}</tbody>
-        </table>`;
+        </table>
+      `;
     }
-    function getDirections(addr){ window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}`,"_blank"); }
+
+    function getDirections(addr) {
+      const encoded = encodeURIComponent(addr);
+      window.open(`https://www.google.com/maps/search/?api=1&query=${encoded}`, "_blank");
+    }
 
     // FILTER PANE
-    const filterPane=document.getElementById("filter-pane");
-    document.getElementById("filter-button").addEventListener("click",()=>filterPane.classList.add("open"));
-    function closeFilterPane(){ filterPane.classList.remove("open"); }
-    let filterStartX=0;
-    filterPane.addEventListener("touchstart",e=>filterStartX=e.touches[0].clientX,{passive:true});
-    filterPane.addEventListener("touchmove",e=>{ if(filterStartX-e.touches[0].clientX>50) closeFilterPane(); },{passive:true});
+    const filterPane = document.getElementById("filter-pane");
+    const filterButton = document.getElementById("filter-button");
+    filterButton.addEventListener("click", openFilterPane);
 
-    // Filter UI
-    const zipInput=document.getElementById("zip-search"),
-          agencyInput=document.getElementById("agency-search"),
-          openNowCb=document.getElementById("open-now-checkbox");
-    document.querySelectorAll(".day-filter, .meal-filter").forEach(cb=>cb.addEventListener("change",applyFilters));
-    zipInput.addEventListener("input",applyFilters);
-    agencyInput.addEventListener("input",applyFilters);
-    openNowCb.addEventListener("change",applyFilters);
+    function openFilterPane() {
+      filterPane.classList.add("open");
+    }
+    function closeFilterPane() {
+      filterPane.classList.remove("open");
+    }
 
-    // ON-MAP sync
-    const mapOpenNowCb=document.getElementById("map-open-now-checkbox");
-    mapOpenNowCb.addEventListener("change",()=>{
-      openNowCb.checked=mapOpenNowCb.checked;
-      applyFilters();
+    let filterStartX = 0;
+    filterPane.addEventListener("touchstart", (e) => {
+      filterStartX = e.touches[0].clientX;
+    }, { passive: true });
+    filterPane.addEventListener("touchmove", (e) => {
+      const currentX = e.touches[0].clientX;
+      const diff = filterStartX - currentX;
+      if (diff > 50) {
+        closeFilterPane();
+      }
+    }, { passive: true });
+
+    // Filter UI elements
+    const zipInput = document.getElementById("zip-search");
+    zipInput.addEventListener("input", applyFilters);
+
+    const agencyInput = document.getElementById("agency-search");
+    agencyInput.addEventListener("input", applyFilters);
+
+    document.querySelectorAll(".day-filter, .meal-filter").forEach((cb) => {
+      cb.addEventListener("change", applyFilters);
     });
-    openNowCb.addEventListener("change",()=>{
-      mapOpenNowCb.checked=openNowCb.checked;
-    });
 
-    function applyFilters(){
-      const isOpen= openNowCb.checked;
-      const today = new Date().toLocaleString("en-US",{weekday:"long"});
-      const nowMin= new Date().getHours()*60 + new Date().getMinutes();
-      filteredData = preparedOnly.filter(r=>{
-        if(!isOpen) return true;
-        if(r["Frequency"]==="Weekly" && r["Day of the Week"]===today){
-          const o=parseTime12Hr(r["Opening Hour"]),
-                c=parseTime12Hr(r["Closing Hour"]);
-          return o!==null && c!==null && nowMin>=o && nowMin<c;
+    const openNowCb = document.getElementById("open-now-checkbox");
+    openNowCb.addEventListener("change", applyFilters);
+
+    // Apply filters to produce a new 'filteredData' array, then re-draw markers
+    function applyFilters() {
+      const zipVal = zipInput.value.trim();
+      const agencyVal = agencyInput.value.trim().toLowerCase();
+      const selectedDays = Array.from(document.querySelectorAll(".day-filter:checked")).map((cb) => cb.value);
+      const selectedMeals = Array.from(document.querySelectorAll(".meal-filter:checked")).map((cb) => cb.value);
+      const isOpenNow = openNowCb.checked;
+
+      // Build day name for today's date
+      const todayDayName = new Date().toLocaleString("en-US", { weekday: "long" });
+      const nowMinutes = getNowInMinutes();
+
+      filteredData = preparedOnly.filter((row) => {
+        const day = (row["Day of the Week"] || "").trim();
+        const meal = (row["Meal Type"] || "Pantry Bag Distribution").trim();
+        const zipField = (row["Address 4"] || "").trim();
+        const agencyField = (row["Agency"] || "").toLowerCase();
+
+        const zipCheck = !zipVal || zipField.includes(zipVal);
+        const dayCheck = (selectedDays.length === 0) || selectedDays.includes(day);
+        const mealCheck = (selectedMeals.length === 0) || selectedMeals.includes(meal);
+        const agencyCheck = !agencyVal || agencyField.includes(agencyVal);
+
+        // If "Open Now" is checked => must meet these:
+        // 1) Frequency = "Weekly"
+        // 2) day == today's day
+        // 3) current time between Opening & Closing
+        let openNowCheck = true;
+        if (isOpenNow) {
+          openNowCheck = false;
+          if (row["Frequency"] === "Weekly" && day === todayDayName) {
+            // parse times
+            const openTime = parseTime12Hr(row["Opening Hour"]);
+            const closeTime = parseTime12Hr(row["Closing Hour"]);
+            if (openTime !== null && closeTime !== null) {
+              // now must be >= openTime and < closeTime
+              if (nowMinutes >= openTime && nowMinutes < closeTime) {
+                openNowCheck = true;
+              }
+            }
+          }
         }
-        return false;
+
+        return zipCheck && dayCheck && agencyCheck && openNowCheck;
       });
+
       addMarkers(filteredData);
+
+      // Clear any highlight or detail pane
       revertHighlight();
       closeDetailsPane();
     }
 
-    function parseTime12Hr(str){
-      if(!str) return null;
-      const parts=str.trim().split(" ");
-      if(parts.length<2) return null;
-      let [time,ampm]=parts,
-          [h,m]=time.split(":").map(x=>parseInt(x,10));
-      if(ampm.toUpperCase()==="PM"&&h<12) h+=12;
-      if(ampm.toUpperCase()==="AM"&&h===12) h=0;
-      return h*60 + (m||0);
+    // Returns minutes after midnight for the current local time
+    function getNowInMinutes() {
+      const now = new Date();
+      return now.getHours() * 60 + now.getMinutes();
+    }
+
+    // Parse "8:30 AM" or "2:00 PM" -> minutes after midnight
+    // If your times are 24-hour format, adapt accordingly
+    function parseTime12Hr(timeStr) {
+      if (!timeStr) return null;
+      // e.g. "8:30 AM" or "2:00 PM"
+      const parts = timeStr.trim().split(" ");
+      if (parts.length < 2) return null;
+      let [timePart, ampm] = parts;
+      let [hourStr, minuteStr] = timePart.split(":");
+      let hour = parseInt(hourStr, 10);
+      let minute = parseInt(minuteStr, 10) || 0;
+      ampm = ampm.toUpperCase();
+
+      if (ampm === "PM" && hour < 12) {
+        hour += 12;
+      } else if (ampm === "AM" && hour === 12) {
+        hour = 0;
+      }
+      return hour * 60 + minute;
     }
   </script>
 </body>
