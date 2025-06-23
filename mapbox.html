@@ -76,7 +76,7 @@
     /* FILTER BUTTON in top-left corner */
     #filter-button {
       position: absolute;
-      top: 25px;
+      top: 20px;
       left: 25px;
       z-index: 1100;
       background-color: #ffffff;
@@ -90,6 +90,27 @@
     }
     #filter-button:hover {
       background-color: #d3e6f0;
+    }
+
+    /* On-map filter controls */
+    #map-filters {
+      position: absolute;
+      top: 70px;
+      left: 25px;
+      z-index: 1100;
+      background: #fff;
+      flex-direction: column;
+      padding: 8px 12px;
+      border: 2px solid #333;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    #map-filters .search-input {
+      width: 100px;
+      margin: 0;
+      padding: 4px 6px;
     }
 
     /* LEFT FILTER OVERLAY */
@@ -258,12 +279,30 @@
   <!-- FILTER BUTTON (top-left) -->
   <button id="filter-button">Filters</button>
 
+  <!-- ON-MAP FILTERS (top-right) -->
+  <div id="map-filters">
+    <input
+      type="text"
+      id="map-zip-search"
+      class="search-input"
+      placeholder="ZIP Code"
+    />
+    <label>
+      <input type="checkbox" id="map-open-now-checkbox" />
+      Open Now
+    </label>
+  </div>
+
   <!-- LEFT FILTER OVERLAY -->
   <div id="filter-pane">
     <div class="close-filter-pane" onclick="closeFilterPane()">X</div>
     <h2>Filter Results</h2>
     <div class="filters">
       <div class="filter-section">
+              <div class="filter-section">
+        <strong>Status</strong><br />
+        <label><input type="checkbox" id="open-now-checkbox" /> Open Now</label><br />
+      </div>
         <strong>Filter by Day of the Week:</strong><br />
         <label><input type="checkbox" class="day-filter" value="Monday" /> Monday</label><br />
         <label><input type="checkbox" class="day-filter" value="Tuesday" /> Tuesday</label><br />
@@ -281,13 +320,6 @@
         <label><input type="checkbox" class="meal-filter" value="Lunch" /> Lunch</label><br />
         <label><input type="checkbox" class="meal-filter" value="Dinner" /> Dinner</label><br />
       </div>
-      
-      <!-- Open Now (Weekly only) -->
-      <div class="filter-section">
-        <strong>Status</strong><br />
-        <label><input type="checkbox" id="open-now-checkbox" /> Open Now</label>
-        <strong></strong><br />
-      </div>
 
       <div class="filter-section">
         <strong>Search by ZIP code:</strong><br />
@@ -299,7 +331,6 @@
         />
       </div>
 
-      <!-- Agency Name Search -->
       <div class="filter-section">
         <strong>Search by Agency Name:</strong><br />
         <input
@@ -326,87 +357,56 @@
     mapboxgl.accessToken = "pk.eyJ1IjoiYXJuYXZrcmlzaG5hIiwiYSI6ImNtNXlhc285dTBoNGwybnB4NDRyZ2phNXgifQ.Q1UhzlIAHhPma35DGkdEeg";
 
     let allData = [], filteredData = [];
-    let allLocations = {};  // Stores all data grouped by lat/lng (unfiltered)
-
+    let allLocations = {};
     let markers = [];
     let highlighted = null;
-    // holds the single “you” marker
     let userMarker;
-
-    // remembers last accepted position
     let lastPos = null;
 
-
-    // Create map
     const map = new mapboxgl.Map({
       container: "map",
       style: "mapbox://styles/mapbox/streets-v11",
       center: [-74.0060, 40.7128],
       zoom: 12
     });
-
-    // Add Fullscreen button
     map.addControl(new mapboxgl.FullscreenControl());
 
-      navigator.geolocation.watchPosition(
-        (pos) => {
-          const { latitude, longitude, accuracy } = pos.coords;
-
-          // base threshold
-          let maxAcc = 50;
-
-          // if the device says its accuracy is already great, let it through
-          // but if it’s poor, enforce the threshold
-          if (accuracy <= 15) {
-            maxAcc = 15;
-          }
-          if (accuracy > maxAcc) return;
-
-          // 2) ignore small moves (<2 meters)
-          if (lastPos) {
-            const dist = getDistanceMeters(
-              lastPos.latitude, lastPos.longitude,
-              latitude, longitude
-            );
-            if (dist < 2) return;
-          }
-
-          // 3) remember this good position
-          lastPos = { latitude, longitude };
-
-          // 4) update (or create) your marker
-          if (userMarker) {
-            userMarker.setLngLat([longitude, latitude]);
-          } else {
-            map.setCenter([longitude, latitude]);
-            map.setZoom(14);
-            userMarker = new mapboxgl.Marker({ color: "#007BFF" })
-              .setLngLat([longitude, latitude])
-              .addTo(map);
-          }
-        },
-        (err) => console.warn("Geolocation error:", err),
-        {
-          enableHighAccuracy: true,
-          maximumAge: 0,
-          timeout: 5000,
+    navigator.geolocation.watchPosition(
+      (pos) => {
+        const { latitude, longitude, accuracy } = pos.coords;
+        let maxAcc = accuracy <= 15 ? 15 : 50;
+        if (accuracy > maxAcc) return;
+        if (lastPos) {
+          const dist = getDistanceMeters(
+            lastPos.latitude, lastPos.longitude,
+            latitude, longitude
+          );
+          if (dist < 2) return;
         }
-      );
+        lastPos = { latitude, longitude };
+        if (userMarker) {
+          userMarker.setLngLat([longitude, latitude]);
+        } else {
+          map.setCenter([longitude, latitude]);
+          map.setZoom(14);
+          userMarker = new mapboxgl.Marker({ color: "#007BFF" })
+            .setLngLat([longitude, latitude])
+            .addTo(map);
+        }
+      },
+      (err) => console.warn("Geolocation error:", err),
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
+    );
 
-            /**
-      * Returns straight-line distance in meters between two lat/lngs
-      */
-      function getDistanceMeters(lat1, lon1, lat2, lon2) {
-        const toRad = d => d * Math.PI / 180;
-        const R = 6371000; // Earth’s radius in meters
-        const φ1 = toRad(lat1), φ2 = toRad(lat2);
-        const Δφ = toRad(lat2 - lat1), Δλ = toRad(lon2 - lon1);
-        const a = Math.sin(Δφ/2)**2 +
-                  Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2)**2;
-        return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
-      }
-
-
+    function getDistanceMeters(lat1, lon1, lat2, lon2) {
+      const toRad = d => d * Math.PI / 180;
+      const R = 6371000;
+      const φ1 = toRad(lat1), φ2 = toRad(lat2);
+      const Δφ = toRad(lat2 - lat1), Δλ = toRad(lon2 - lon1);
+      const a = Math.sin(Δφ/2)**2 +
+                Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2)**2;
+      return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+    }
 
     // Load CSV
     const csvUrl = "https://fbnycpublic.blob.core.windows.net/mapdata/customsearch_agency_map_data.csv?sv=2022-11-02&ss=bfqt&srt=sco&sp=rptfx&se=2050-01-18T03:56:20Z&st=2025-01-17T19:56:20Z&spr=https&sig=u41iVNckMwY%2Fkx76wPlA6CfSUzP9Ls4PUijuBfSsWAY%3D";
@@ -414,24 +414,18 @@
       download: true,
       header: true,
       complete: (results) => {
-        // Keep only "Inactive" == "No"
         allData = results.data.filter((row) => row["Inactive"] === "No");
-
-        // Group all data by location (this has no filtering)
         allLocations = groupByLocation(allData);
-
-        // Initially, let's show all data on the map
         filteredData = allData;
         addMarkers(filteredData);
       }
     });
 
-    // Group rows by lat/lng => object { "lat,lng": [rows...] }
     function groupByLocation(rows) {
       const obj = {};
       rows.forEach((r) => {
-        const lat = parseFloat(r["Latitude"] || "0").toFixed(8);
-        const lng = parseFloat(r["Longitude"] || "0").toFixed(8);
+        const lat = parseFloat(r["Latitude"]||"0").toFixed(8);
+        const lng = parseFloat(r["Longitude"]||"0").toFixed(8);
         const key = `${lat},${lng}`;
         if (!obj[key]) obj[key] = [];
         obj[key].push(r);
@@ -439,69 +433,43 @@
       return obj;
     }
 
-    // Create markers based on filteredData
     function addMarkers(data) {
-      // remove old markers
-      markers.forEach((m) => m.marker.remove());
+      markers.forEach(m => m.marker.remove());
       markers = [];
-
-      // Group the *filtered* data to decide which markers appear
       const subset = groupByLocation(data);
-
-      // For each location in the filtered subset
       for (const locationKey in subset) {
         const agencies = subset[locationKey];
         const [lat, lng] = locationKey.split(",").map(parseFloat);
         if (isNaN(lat) || isNaN(lng)) continue;
-
-        // Decide marker color based on meal type(s)
         const color = getColorForGroup(agencies);
-
-        // Create a marker element
         const el = document.createElement("div");
         el.className = "site-marker";
         el.style.backgroundColor = color;
-
-        // Add to map
         const marker = new mapboxgl.Marker(el)
           .setLngLat([lng, lat])
           .addTo(map);
-
         markers.push({ marker, color, el, locationKey });
-
-        // On click, show details for the *unfiltered* data at this location
         el.addEventListener("click", () => {
           toggleMarker(marker, color, locationKey);
         });
       }
     }
 
-    // If multiple distinct meal types => #FFA500 (Multi-Service), else color by single meal type
     function getColorForGroup(agencies) {
       const mealTypes = new Set();
-      agencies.forEach((a) => {
-        const mt = (a["Meal Type"] || "Pantry Bag Distribution").toLowerCase();
-        mealTypes.add(mt);
-      });
-      if (mealTypes.size > 1) {
-        return "#FFA500"; // Multi-Service
-      } else {
-        // Only one meal type
-        return getMealColor(agencies[0]["Meal Type"]);
-      }
+      agencies.forEach(a => mealTypes.add((a["Meal Type"]||"").toLowerCase()));
+      if (mealTypes.size > 1) return "#FFA500";
+      return getMealColor(agencies[0]["Meal Type"]);
     }
-
-    // Color by single meal type
     function getMealColor(mealType) {
-      const t = (mealType || "").toLowerCase();
+      const t = (mealType||"").toLowerCase();
       if (t.includes("pantry bag")) return "#8A2BE2";
       if (t.includes("breakfast")) return "#c04343";
       if (t.includes("lunch")) return "#3CB371";
       if (t.includes("dinner")) return "#4682B4";
-      return "#FFA500"; // fallback
+      return "#FFA500";
     }
 
-    // Toggle highlight
     function toggleMarker(marker, originalColor, locationKey) {
       if (highlighted && highlighted.marker === marker) {
         revertHighlight();
@@ -509,13 +477,9 @@
       } else {
         revertHighlight();
         highlightMarker(marker, originalColor);
-
-        // IMPORTANT: show details for ALL rows at that location, ignoring filters
-        const fullAgencies = allLocations[locationKey] || [];
-        openDetailsPane(fullAgencies);
+        openDetailsPane(allLocations[locationKey] || []);
       }
     }
-
     function highlightMarker(marker, originalColor) {
       const el = marker.getElement();
       el.style.width = "24px";
@@ -524,7 +488,6 @@
       el.style.border = "2px solid #FFF";
       highlighted = { marker, el, color: originalColor };
     }
-
     function revertHighlight() {
       if (!highlighted) return;
       highlighted.el.style.width = "16px";
@@ -534,20 +497,11 @@
       highlighted = null;
     }
 
-    // DETAILS PANE
     const detailsPane = document.getElementById("details-pane");
     const detailsContent = document.getElementById("details-content");
-
-    let startX = 0;
-    detailsPane.addEventListener("touchstart", (e) => {
-      startX = e.touches[0].clientX;
-    }, { passive: true });
-    detailsPane.addEventListener("touchmove", (e) => {
-      const currentX = e.touches[0].clientX;
-      const diff = currentX - startX;
-      if (diff > 50) {
-        closeDetailsPane();
-      }
+    detailsPane.addEventListener("touchstart", e => startX = e.touches[0].clientX, { passive: true });
+    detailsPane.addEventListener("touchmove", e => {
+      if (e.touches[0].clientX - startX > 50) closeDetailsPane();
     }, { passive: true });
 
     function openDetailsPane(agencies) {
@@ -557,39 +511,30 @@
     function closeDetailsPane() {
       detailsPane.classList.remove("open");
     }
-
-    // Build details table (shows all days/hours for the location)
     function buildAgencyHTML(agencies) {
       if (!agencies.length) return "<p>No agency data.</p>";
-
-      // Sort by day-of-week -> meal type
       const dayOrder = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
       agencies.sort((a,b) => {
         const d = dayOrder.indexOf(a["Day of the Week"]) - dayOrder.indexOf(b["Day of the Week"]);
-        if (d !== 0) return d;
-        return (a["Meal Type"]||"").localeCompare(b["Meal Type"]||"");
+        return d !== 0 ? d : (a["Meal Type"]||"").localeCompare(b["Meal Type"]||"");
       });
-
       const first = agencies[0];
       const agencyName = first["Agency"]?.split(":")[1]?.trim() || first["Agency"] || "";
       const address1 = first["Address 1"] || "";
       const address4 = first["Address 4"] || "";
       const phone = first["Phone"] || "";
-      const fullAddress = `${address1}, ${address4}${agencyName ? ", " + agencyName : ""}`.trim();
-
+      const fullAddress = `${address1}, ${address4}${agencyName ? ", "+agencyName : ""}`.trim();
       let rows = "";
-      agencies.forEach((r) => {
+      agencies.forEach(r => {
         rows += `
           <tr>
-            <td>${r["Day of the Week"] || ""}</td>
-            <td>${r["Meal Type"] || ""}</td>
-            <td>${r["Frequency"] || ""}</td>
-            <td>${r["Opening Hour"] || ""}</td>
-            <td>${r["Closing Hour"] || ""}</td>
-          </tr>
-        `;
+            <td>${r["Day of the Week"]||""}</td>
+            <td>${r["Meal Type"]||""}</td>
+            <td>${r["Frequency"]||""}</td>
+            <td>${r["Opening Hour"]||""}</td>
+            <td>${r["Closing Hour"]||""}</td>
+          </tr>`;
       });
-
       return `
         <div class="agency-name">${agencyName}</div>
         <div class="agency-address">${address1}</div>
@@ -601,100 +546,89 @@
         <table class="pantry-table">
           <thead>
             <tr>
-              <th>Day</th>
-              <th>Meal Type</th>
-              <th>Frequency</th>
-              <th>Open</th>
-              <th>Close</th>
+              <th>Day</th><th>Meal Type</th><th>Frequency</th><th>Open</th><th>Close</th>
             </tr>
           </thead>
           <tbody>${rows}</tbody>
-        </table>
-      `;
+        </table>`;
     }
-
     function getDirections(addr) {
-      const encoded = encodeURIComponent(addr);
-      window.open(`https://www.google.com/maps/search/?api=1&query=${encoded}`, "_blank");
+      window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}`, "_blank");
     }
 
-    // FILTER PANE
+    // FILTER PANE open/close
     const filterPane = document.getElementById("filter-pane");
-    const filterButton = document.getElementById("filter-button");
-    filterButton.addEventListener("click", openFilterPane);
-
-    function openFilterPane() {
-      filterPane.classList.add("open");
-    }
-    function closeFilterPane() {
-      filterPane.classList.remove("open");
-    }
-
+    document.getElementById("filter-button").addEventListener("click", () => filterPane.classList.add("open"));
+    function closeFilterPane() { filterPane.classList.remove("open"); }
     let filterStartX = 0;
-    filterPane.addEventListener("touchstart", (e) => {
-      filterStartX = e.touches[0].clientX;
-    }, { passive: true });
-    filterPane.addEventListener("touchmove", (e) => {
-      const currentX = e.touches[0].clientX;
-      const diff = filterStartX - currentX;
-      if (diff > 50) {
-        closeFilterPane();
-      }
+    filterPane.addEventListener("touchstart", e => filterStartX = e.touches[0].clientX, { passive: true });
+    filterPane.addEventListener("touchmove", e => {
+      if (filterStartX - e.touches[0].clientX > 50) closeFilterPane();
     }, { passive: true });
 
     // Filter UI elements
     const zipInput = document.getElementById("zip-search");
-    zipInput.addEventListener("input", applyFilters);
-
     const agencyInput = document.getElementById("agency-search");
+    document.querySelectorAll(".day-filter, .meal-filter").forEach(cb => cb.addEventListener("change", applyFilters));
+    zipInput.addEventListener("input", applyFilters);
     agencyInput.addEventListener("input", applyFilters);
-
-    document.querySelectorAll(".day-filter, .meal-filter").forEach((cb) => {
-      cb.addEventListener("change", applyFilters);
-    });
-
     const openNowCb = document.getElementById("open-now-checkbox");
     openNowCb.addEventListener("change", applyFilters);
 
-    // Apply filters to produce a new 'filteredData' array, then re-draw markers
+    // --- SYNC SIDE-PANE ↔ ON-MAP CONTROLS ---
+    const mapZipInput        = document.getElementById("map-zip-search");
+    const mapOpenNowCheckbox = document.getElementById("map-open-now-checkbox");
+
+    // when user types on-map, mirror to side-pane & refilter
+    mapZipInput.addEventListener("input", () => {
+      zipInput.value = mapZipInput.value;
+      applyFilters();
+    });
+    // when user types in side-pane, mirror to on-map (no need to refilter twice)
+    zipInput.addEventListener("input", () => {
+      mapZipInput.value = zipInput.value;
+    });
+
+    // same for "Open Now"
+    mapOpenNowCheckbox.addEventListener("change", () => {
+      openNowCb.checked = mapOpenNowCheckbox.checked;
+      applyFilters();
+    });
+    openNowCb.addEventListener("change", () => {
+      mapOpenNowCheckbox.checked = openNowCb.checked;
+    });
+
+    // Apply filters + re-draw
     function applyFilters() {
-      const zipVal = zipInput.value.trim();
-      const agencyVal = agencyInput.value.trim().toLowerCase();
-      const selectedDays = Array.from(document.querySelectorAll(".day-filter:checked")).map((cb) => cb.value);
-      const selectedMeals = Array.from(document.querySelectorAll(".meal-filter:checked")).map((cb) => cb.value);
-      const isOpenNow = openNowCb.checked;
+      const zipVal       = zipInput.value.trim();
+      const agencyVal    = agencyInput.value.trim().toLowerCase();
+      const selectedDays = Array.from(document.querySelectorAll(".day-filter:checked")).map(cb => cb.value);
+      const selectedMeals= Array.from(document.querySelectorAll(".meal-filter:checked")).map(cb => cb.value);
+      const isOpenNow    = openNowCb.checked;
 
-      // Build day name for today's date
       const todayDayName = new Date().toLocaleString("en-US", { weekday: "long" });
-      const nowMinutes = getNowInMinutes();
+      const nowMinutes   = getNowInMinutes();
 
-      filteredData = allData.filter((row) => {
-        const day = (row["Day of the Week"] || "").trim();
-        const meal = (row["Meal Type"] || "Pantry Bag Distribution").trim();
-        const zipField = (row["Address 4"] || "").trim();
-        const agencyField = (row["Agency"] || "").toLowerCase();
+      filteredData = allData.filter(row => {
+        const day    = (row["Day of the Week"]||"").trim();
+        const meal   = (row["Meal Type"]||"Pantry Bag Distribution").trim();
+        const zipFld = (row["Address 4"]||"").trim();
+        const agencyFld = (row["Agency"]||"").toLowerCase();
 
-        const zipCheck = !zipVal || zipField.includes(zipVal);
-        const dayCheck = (selectedDays.length === 0) || selectedDays.includes(day);
-        const mealCheck = (selectedMeals.length === 0) || selectedMeals.includes(meal);
-        const agencyCheck = !agencyVal || agencyField.includes(agencyVal);
+        const zipCheck    = !zipVal || zipFld.includes(zipVal);
+        const dayCheck    = !selectedDays.length || selectedDays.includes(day);
+        const mealCheck   = !selectedMeals.length || selectedMeals.includes(meal);
+        const agencyCheck = !agencyVal || agencyFld.includes(agencyVal);
 
-        // If "Open Now" is checked => must meet these:
-        // 1) Frequency = "Weekly"
-        // 2) day == today's day
-        // 3) current time between Opening & Closing
         let openNowCheck = true;
         if (isOpenNow) {
           openNowCheck = false;
-          if (row["Frequency"] === "Weekly" && day === todayDayName) {
-            // parse times
-            const openTime = parseTime12Hr(row["Opening Hour"]);
+          if (row["Frequency"]==="Weekly" && day===todayDayName) {
+            const openTime  = parseTime12Hr(row["Opening Hour"]);
             const closeTime = parseTime12Hr(row["Closing Hour"]);
-            if (openTime !== null && closeTime !== null) {
-              // now must be >= openTime and < closeTime
-              if (nowMinutes >= openTime && nowMinutes < closeTime) {
-                openNowCheck = true;
-              }
+            if (openTime!==null && closeTime!==null &&
+                nowMinutes>=openTime && nowMinutes<closeTime) {
+              openNowCheck = true;
             }
           }
         }
@@ -703,37 +637,26 @@
       });
 
       addMarkers(filteredData);
-
-      // Clear any highlight or detail pane
       revertHighlight();
       closeDetailsPane();
     }
 
-    // Returns minutes after midnight for the current local time
     function getNowInMinutes() {
       const now = new Date();
-      return now.getHours() * 60 + now.getMinutes();
+      return now.getHours()*60 + now.getMinutes();
     }
 
-    // Parse "8:30 AM" or "2:00 PM" -> minutes after midnight
-    // If your times are 24-hour format, adapt accordingly
     function parseTime12Hr(timeStr) {
       if (!timeStr) return null;
-      // e.g. "8:30 AM" or "2:00 PM"
       const parts = timeStr.trim().split(" ");
-      if (parts.length < 2) return null;
+      if (parts.length<2) return null;
       let [timePart, ampm] = parts;
-      let [hourStr, minuteStr] = timePart.split(":");
-      let hour = parseInt(hourStr, 10);
-      let minute = parseInt(minuteStr, 10) || 0;
+      let [hourStr, minStr] = timePart.split(":");
+      let hour = parseInt(hourStr,10), min = parseInt(minStr,10)||0;
       ampm = ampm.toUpperCase();
-
-      if (ampm === "PM" && hour < 12) {
-        hour += 12;
-      } else if (ampm === "AM" && hour === 12) {
-        hour = 0;
-      }
-      return hour * 60 + minute;
+      if (ampm==="PM" && hour<12) hour+=12;
+      if (ampm==="AM" && hour===12) hour=0;
+      return hour*60 + min;
     }
   </script>
 </body>
