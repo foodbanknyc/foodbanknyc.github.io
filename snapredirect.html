@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Redirecting to ACCESS HRA…</title>
+  </head>
+  <body>
+    <form id="siteForm"
+          action="https://a069-access.nyc.gov/accesshra/"
+          method="post">
+      <!-- Grab siteId from the query string, or hard-code it -->
+      <input type="hidden" name="siteId"
+             value="0038" />
+    </form>
+    <script>
+      // Auto-submit as soon as the page loads
+      document.getElementById('siteForm').submit();
+    </script>
+    <p>Redirecting you to the application…</p>
+  </body>
+</html>
