@@ -58,7 +58,7 @@
       padding: 10px;
       border: 1px solid #ccc;
       border-radius: 5px;
-      font-size: 0.9em;
+      font-size: 1em;
       box-shadow: 0 2px 8px rgba(0,0,0,0.15);
     }
     .legend-item {
@@ -67,8 +67,8 @@
       margin-bottom: 4px;
     }
     .color-box {
-      width: 12px;
-      height: 12px;
+      width: 14px;
+      height: 14px;
       margin-right: 8px;
       border: 1px solid #333;
     }
@@ -81,36 +81,47 @@
       z-index: 1100;
       background-color: #ffffff;
       color: #000000;
-      border: 2px solid #333;
+      border: 3px solid #333;
       border-radius: 4px;
-      padding: 8px 16px;
+      padding: 10px 16px;
       cursor: pointer;
-      font-size: 1em;
+      font-size: 1.25em;
       font-weight: bold;
     }
     #filter-button:hover {
-      background-color: #d3e6f0;
+      background-color: #f3d7a0;
     }
 
     /* On-map filter controls */
     #map-filters {
       position: absolute;
-      top: 70px;
+      top: 85px;
       left: 25px;
       z-index: 1100;
       background: #fff;
       flex-direction: column;
-      padding: 8px 12px;
-      border: 2px solid #333;
+      padding: 8px 16px;
+      border: 3px solid #333;
       border-radius: 4px;
       display: flex;
       align-items: center;
       gap: 12px;
     }
-    #map-filters .search-input {
-      width: 100px;
-      margin: 0;
-      padding: 4px 6px;
+
+    /* 1) Make the checkbox itself larger */
+    #map-filters input[type="checkbox"] {
+      width: 22px;
+      height: 22px;
+      margin-right: 8px;
+        }
+
+    /* 2) Force label contents to center-align vertically */
+    #map-filters label {
+      display: flex;
+      align-items: center;             /* vertical centering */
+      gap: 7px;  
+      font-size: 1.25em;                       /* optional: even spacing if you want */
+      font-weight: bold;
     }
 
     /* LEFT FILTER OVERLAY */
@@ -238,9 +249,9 @@
 
     /* SITE MARKERS */
     .site-marker {
-      width: 16px;
-      height: 16px;
-      border: 2px solid #333;
+      width: 28px;
+      height: 28px;
+      border: 3px solid #333;
       border-radius: 50%;
       cursor: pointer;
     }
@@ -277,16 +288,10 @@
   </div>
 
   <!-- FILTER BUTTON (top-left) -->
-  <button id="filter-button">Filters</button>
+  <button id="filter-button">Choose Filters</button>
 
   <!-- ON-MAP FILTERS (top-right) -->
   <div id="map-filters">
-    <input
-      type="text"
-      id="map-zip-search"
-      class="search-input"
-      placeholder="ZIP Code"
-    />
     <label>
       <input type="checkbox" id="map-open-now-checkbox" />
       Open Now
@@ -369,7 +374,7 @@
       center: [-74.0060, 40.7128],
       zoom: 12
     });
-    map.addControl(new mapboxgl.FullscreenControl());
+
 
     navigator.geolocation.watchPosition(
       (pos) => {
@@ -482,18 +487,18 @@
     }
     function highlightMarker(marker, originalColor) {
       const el = marker.getElement();
-      el.style.width = "24px";
-      el.style.height = "24px";
+      el.style.width = "28px";
+      el.style.height = "28px";
       el.style.backgroundColor = "#FF3333";
-      el.style.border = "2px solid #FFF";
+      el.style.border = "3px solid #FFF";
       highlighted = { marker, el, color: originalColor };
     }
     function revertHighlight() {
       if (!highlighted) return;
-      highlighted.el.style.width = "16px";
-      highlighted.el.style.height = "16px";
+      highlighted.el.style.width = "28px";
+      highlighted.el.style.height = "28px";
       highlighted.el.style.backgroundColor = highlighted.color;
-      highlighted.el.style.border = "2px solid #333";
+      highlighted.el.style.border = "3px solid #333";
       highlighted = null;
     }
 
@@ -575,19 +580,8 @@
     const openNowCb = document.getElementById("open-now-checkbox");
     openNowCb.addEventListener("change", applyFilters);
 
-    // --- SYNC SIDE-PANE ↔ ON-MAP CONTROLS ---
-    const mapZipInput        = document.getElementById("map-zip-search");
+  
     const mapOpenNowCheckbox = document.getElementById("map-open-now-checkbox");
-
-    // when user types on-map, mirror to side-pane & refilter
-    mapZipInput.addEventListener("input", () => {
-      zipInput.value = mapZipInput.value;
-      applyFilters();
-    });
-    // when user types in side-pane, mirror to on-map (no need to refilter twice)
-    zipInput.addEventListener("input", () => {
-      mapZipInput.value = zipInput.value;
-    });
 
     // same for "Open Now"
     mapOpenNowCheckbox.addEventListener("change", () => {
