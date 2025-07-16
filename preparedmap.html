@@ -58,7 +58,7 @@
       padding: 10px;
       border: 1px solid #ccc;
       border-radius: 5px;
-      font-size: 0.9em;
+      font-size: 1.1em;
       box-shadow: 0 2px 8px rgba(0,0,0,0.15);
     }
     .legend-item {
@@ -90,11 +90,11 @@
       border-radius: 4px;
       padding: 8px 16px;
       cursor: pointer;
-      font-size: 1em;
+      font-size: 1.3em;
       font-weight: bold;
       box-shadow: 0 0 15px rgba(122, 36, 2, 0.6);
       transition: box-shadow 0.1s;
-      animation: pulse 2s ease-in-out 3;
+      animation: pulse 2s ease-in-out 1;
     }
     #filter-button:hover {
       background-color: #d3e6f0;
@@ -225,16 +225,16 @@
 
     /* SITE MARKERS */
     .site-marker {
-      width: 16px;
-      height: 16px;
-      border: 2px solid #333;
+      width: 24px;
+      height: 24px;
+      border: 3px solid #333;
       border-radius: 50%;
       cursor: pointer;
     }
     @media (max-width: 900px) {
       .site-marker {
-        width: 18px !important;
-        height: 18px !important;
+        width: 24px !important;
+        height: 24px !important;
       }
     }
   </style>
@@ -348,8 +348,6 @@
       zoom: 12
     });
 
-    // Add Fullscreen button
-    map.addControl(new mapboxgl.FullscreenControl());
 
     navigator.geolocation.watchPosition(
       (pos) => {
@@ -537,10 +535,10 @@ Papa.parse(csvUrl, {
 
     function revertHighlight() {
       if (!highlighted) return;
-      highlighted.el.style.width = "16px";
-      highlighted.el.style.height = "16px";
+      highlighted.el.style.width = "24px";
+      highlighted.el.style.height = "24px";
       highlighted.el.style.backgroundColor = highlighted.color;
-      highlighted.el.style.border = "2px solid #333";
+      highlighted.el.style.border = "3px solid #333";
       highlighted = null;
     }
 

@@ -85,7 +85,7 @@
       border-radius: 4px;
       padding: 10px 16px;
       cursor: pointer;
-      font-size: 1.25em;
+      font-size: 1.3em;
       font-weight: bold;
     }
     #filter-button:hover {
@@ -100,7 +100,7 @@
       z-index: 1100;
       background: #fff;
       flex-direction: column;
-      padding: 8px 16px;
+      padding: 7px 14px;
       border: 3px solid #333;
       border-radius: 4px;
       display: flex;
@@ -120,7 +120,7 @@
       display: flex;
       align-items: center;             /* vertical centering */
       gap: 7px;  
-      font-size: 1.25em;                       /* optional: even spacing if you want */
+      font-size: 1.2em;                       /* optional: even spacing if you want */
       font-weight: bold;
     }
 
@@ -249,16 +249,16 @@
 
     /* SITE MARKERS */
     .site-marker {
-      width: 28px;
-      height: 28px;
+      width: 24px;
+      height: 24px;
       border: 3px solid #333;
       border-radius: 50%;
       cursor: pointer;
     }
     @media (max-width: 900px) {
       .site-marker {
-        width: 18px !important;
-        height: 18px !important;
+        width: 24px !important;
+        height: 24px !important;
       }
     }
   </style>
@@ -487,16 +487,16 @@
     }
     function highlightMarker(marker, originalColor) {
       const el = marker.getElement();
-      el.style.width = "28px";
-      el.style.height = "28px";
+      el.style.width = "24px";
+      el.style.height = "24px";
       el.style.backgroundColor = "#FF3333";
       el.style.border = "3px solid #FFF";
       highlighted = { marker, el, color: originalColor };
     }
     function revertHighlight() {
       if (!highlighted) return;
-      highlighted.el.style.width = "28px";
-      highlighted.el.style.height = "28px";
+      highlighted.el.style.width = "24px";
+      highlighted.el.style.height = "24px";
       highlighted.el.style.backgroundColor = highlighted.color;
       highlighted.el.style.border = "3px solid #333";
       highlighted = null;
