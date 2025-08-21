@@ -5,6 +5,12 @@
   <title>FBNYC Find Food Map</title>
   <link rel="icon" href="lightning.png" type="image/x-icon" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	
+	<!-- Google Fonts -->
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+	
 
   <!-- Mapbox + Papa Parse -->
   <link href="https://api.mapbox.com/mapbox-gl-js/v2.13.0/mapbox-gl.css" rel="stylesheet" />
@@ -18,10 +24,36 @@
       padding: 0;
       width: 100%;
       height: 100%;
-      font-family: Arial, sans-serif;
+      font-family: 'Public Sans', Arial, sans-serif; /* now using Public Sans */
       box-sizing: border-box;
       overflow: hidden;
+		color:#051F67;
     }
+	  h1, h2, h3, .agency-name {
+  font-family: 'Public Sans', sans-serif;
+  font-weight: 800;
+}
+	  h2 {
+		  font-size:40px;
+		  margin-top: 0px;
+	  }
+
+body, p, label, button {
+  font-family: 'Public Sans', sans-serif;
+  font-weight: 400;
+}
+	  
+	  #filter-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px; /* space between text and icon */
+}
+
+#filter-toggle svg {
+  width: 1em;
+  height: 1em;
+  fill: currentColor; /* inherits the button’s text color */
+}
 
     /* Scrollbar styling (Chrome/Safari/Edge) */
     ::-webkit-scrollbar {
@@ -55,9 +87,9 @@
       left: 20px;
       z-index: 1000;
       background: rgba(255,255,255,0.9);
-      padding: 10px;
+      padding: 24px;
       border: 1px solid #ccc;
-      border-radius: 5px;
+      border-radius: 16px;
       font-size: 1em;
       box-shadow: 0 2px 8px rgba(0,0,0,0.15);
     }
@@ -71,7 +103,24 @@
       height: 14px;
       margin-right: 8px;
       border: 1px solid #333;
+		border-radius: 50%;
     }
+	  .multi-service {
+		  background-color: #FFA500;
+	  }
+	  .pantry-bag {
+		  background-color: #8A2BE2;
+	  }
+	  .breakfast {
+		  background-color: #c04343;
+	  }
+	  .lunch {
+		  background-color: #3CB371;
+	  }
+	  .dinner {
+		  background-color: #4682B4;
+	  }
+	  
 
     /* FILTER BUTTON in top-left corner */
     #filter-button {
@@ -79,17 +128,19 @@
       top: 20px;
       left: 25px;
       z-index: 1100;
-      background-color: #ffffff;
-      color: #000000;
-      border: 3px solid #333;
-      border-radius: 4px;
-      padding: 10px 16px;
+      background-color: #FF5301;
+      color: #ffffff;
+      border: 0px solid #333;
+      border-radius: 24px;
+      padding: 16px 32px;
       cursor: pointer;
-      font-size: 1.3em;
+      font-size: 1.1em;
       font-weight: bold;
+		box-shadow: 0px 4px 16px #000000;
+		transition: all 0.4s;
     }
     #filter-button:hover {
-      background-color: #f3d7a0;
+      transform: scale(1.1);
     }
 
     /* On-map filter controls */
@@ -100,9 +151,9 @@
       z-index: 1100;
       background: #fff;
       flex-direction: column;
-      padding: 7px 14px;
-      border: 3px solid #333;
-      border-radius: 4px;
+      padding: 14px 24px;
+      border: 3px solid #051F67;
+      border-radius: 30px;
       display: flex;
       align-items: center;
       gap: 12px;
@@ -110,8 +161,8 @@
 
     /* 1) Make the checkbox itself larger */
     #map-filters input[type="checkbox"] {
-      width: 22px;
-      height: 22px;
+      width: 16px;
+      height: 16px;
       margin-right: 8px;
         }
 
@@ -120,7 +171,7 @@
       display: flex;
       align-items: center;             /* vertical centering */
       gap: 7px;  
-      font-size: 1.2em;                       /* optional: even spacing if you want */
+      font-size: 1.1em;                       /* optional: even spacing if you want */
       font-weight: bold;
     }
 
@@ -130,19 +181,22 @@
       top: 0;
       bottom: 0;
       left: 0;
-      width: 350px;
+      width: 460px;
       max-width: 80%;
       background: #fff;
       z-index: 3000;
       box-shadow: 2px 0 8px rgba(0,0,0,0.2);
       overflow-y: auto;
-      padding: 16px;
-      transform: translateX(-100%);
+      padding: 5%;
+      transform: translateX(0%);
       transition: transform 0.3s ease-in-out;
     }
     #filter-pane.open {
       transform: translateX(0);
     }
+	  #filter-pane.close {
+		  transform: translateX(-100%);
+	  }
     .close-filter-pane {
       position: absolute;
       top: 16px;
@@ -159,12 +213,12 @@
       top: 0;
       bottom: 0;
       right: 0;
-      width: 450px;
+      width: 460px;
       background: #fff;
       z-index: 2000;
       box-shadow: -2px 0 8px rgba(0,0,0,0.2);
       overflow-y: auto;
-      padding: 16px;
+      padding: 5%;
       transform: translateX(100%);
       transition: transform 0.3s ease-in-out;
     }
@@ -189,16 +243,16 @@
     /* Agency, phone, address */
     .agency-name {
       font-weight: bold;
-      text-align: center;
-      margin-bottom: 4px;
+      margin-bottom: 24px;
+		font-size:26px;
     }
     .agency-address {
       margin-bottom: 4px;
-      text-align: center;
+		display: inline-block;
     }
+	  
     .agency-phone {
       margin-bottom: 8px;
-      text-align: center;
     }
 
     /* Table, button, etc. */
@@ -218,34 +272,89 @@
     }
     .button-container {
       display: flex;
-      justify-content: center;
       margin: 12px 0;
       padding-bottom: 25px;
     }
     #directions-button {
-      padding: 8px 16px;
-      font-size: 1em;
-      background-color: #007bff;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
+    padding: 12px 24px;
+    font-size: 1em;
+    background-color: #FF5301;
+    color: white;
+    border: none;
+    border-radius: 24px;
+    cursor: pointer;
     }
     #directions-button:hover {
-      background-color: #0056b3;
+      background-color: #051F67;
     }
 
     /* FILTERS */
     .filters { margin: 12px 0; }
-    .filter-section { margin-bottom: 12px; }
+ 
     .search-input {
       margin-bottom: 8px;
       margin-top: 5px;
-      padding: 6px;
-      width: 80%;
-      max-width: 300px;
+      padding: 16px;
+      width: 100%;
+      max-width: 100%;
       box-sizing: border-box;
+		border:1px solid #A2A9B0;
+		border-radius: 4px;
+		font-size:16px;
+		
+		
     }
+	  /*.search-zip, .search-agency {
+		  width:49%;
+		  float:left;
+	  }
+	  .search-zip {
+		  margin-right:2%;
+	  }*/
+	  .filter-heading {
+		  font-weight: bold;
+		  display: block;
+		  margin-bottom:8px;
+	  }
+	  .filter-section label {
+		      display: flex;
+    margin-bottom: 4px;
+
+    flex-direction: row;
+    align-items: center;
+}
+	  
+	.filter-group {
+    padding: 26px;
+    margin-bottom: 10px;
+    border-radius: 16px;
+    background: #f7f7f7;
+	  }
+	  .columns-wrap {
+    display: flex;
+    justify-content: flex-start;
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+	  .column.one-half {
+		  flex: 1 1 200px; /* equal width until they hit 200px, then wrap */
+	  }
+	  .close-filter-pane {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+  color: #333; /* icon color */
+}
+
+.close-filter-pane:hover {
+  background-color: rgba(0, 0, 0, 0.08);
+}
 
     /* SITE MARKERS */
     .site-marker {
@@ -261,6 +370,14 @@
         height: 24px !important;
       }
     }
+	  
+	
+/* Example: make sure it stays visible in desktop layout */
+@media (max-width: 1024px) {
+  #filter-pane {
+      transform: translateX(-100%);
+  }
+}
   </style>
 </head>
 <body>
@@ -271,24 +388,43 @@
   <!-- LEGEND pinned -->
   <div id="legend">
     <div class="legend-item">
-      <div class="color-box" style="background-color: #FFA500;"></div> Multi-Service
+      <div class="color-box multi-service"></div> Multi-Service
     </div>
     <div class="legend-item">
-      <div class="color-box" style="background-color: #8A2BE2;"></div> Pantry Bag
+      <div class="color-box pantry-bag"></div> Pantry Groceries
     </div>
     <div class="legend-item">
-      <div class="color-box" style="background-color: #c04343;"></div> Breakfast
+      <div class="color-box breakfast"></div> Breakfast
     </div>
     <div class="legend-item">
-      <div class="color-box" style="background-color: #3CB371;"></div> Lunch
+      <div class="color-box lunch"></div> Lunch
     </div>
     <div class="legend-item">
-      <div class="color-box" style="background-color: #4682B4;"></div> Dinner
+      <div class="color-box dinner"></div> Dinner
     </div>
   </div>
 
   <!-- FILTER BUTTON (top-left) -->
-  <button id="filter-button">Choose Filters</button>
+  <button id="filter-button">Filters <svg xmlns="http://www.w3.org/2000/svg" 
+       viewBox="0 0 448 512" 
+       width="16" height="16" 
+       aria-hidden="true" 
+       focusable="false" 
+       style="margin-left:8px; vertical-align:middle; fill:currentColor;">
+    <path d="M0 80c0-8.8 7.2-16 16-16h80V48c0-26.5 21.5-48 
+             48-48s48 21.5 48 48v16h240c8.8 0 16 7.2 
+             16 16s-7.2 16-16 16H192v16c0 26.5-21.5 
+             48-48 48s-48-21.5-48-48V96H16c-8.8 0-16-7.2-16-16zm0 
+             176c0-8.8 7.2-16 16-16h272v-16c0-26.5 
+             21.5-48 48-48s48 21.5 48 48v16h48c8.8 0 
+             16 7.2 16 16s-7.2 16-16 16h-48v16c0 
+             26.5-21.5 48-48 48s-48-21.5-48-48v-16H16c-8.8 
+             0-16-7.2-16-16zm0 176c0-8.8 7.2-16 16-16h144v-16c0-26.5 
+             21.5-48 48-48s48 21.5 48 48v16h176c8.8 
+             0 16 7.2 16 16s-7.2 16-16 16H256v16c0 
+             26.5-21.5 48-48 48s-48-21.5-48-48v-16H16c-8.8 
+             0-16-7.2-16-16z"/>
+  </svg></button>
 
   <!-- ON-MAP FILTERS (top-right) -->
   <div id="map-filters">
@@ -296,62 +432,92 @@
       <input type="checkbox" id="map-open-now-checkbox" />
       Open Now
     </label>
-  </div>
-
-  <!-- LEFT FILTER OVERLAY -->
-  <div id="filter-pane">
-    <div class="close-filter-pane" onclick="closeFilterPane()">X</div>
-    <h2>Filter Results</h2>
-    <div class="filters">
-      <div class="filter-section">
-              <div class="filter-section">
-        <strong>Status</strong><br />
-        <label><input type="checkbox" id="open-now-checkbox" /> Open Now</label><br />
-      </div>
-        <strong>Filter by Day of the Week:</strong><br />
-        <label><input type="checkbox" class="day-filter" value="Monday" /> Monday</label><br />
-        <label><input type="checkbox" class="day-filter" value="Tuesday" /> Tuesday</label><br />
-        <label><input type="checkbox" class="day-filter" value="Wednesday" /> Wednesday</label><br />
-        <label><input type="checkbox" class="day-filter" value="Thursday" /> Thursday</label><br />
-        <label><input type="checkbox" class="day-filter" value="Friday" /> Friday</label><br />
-        <label><input type="checkbox" class="day-filter" value="Saturday" /> Saturday</label><br />
-        <label><input type="checkbox" class="day-filter" value="Sunday" /> Sunday</label>
-      </div>
-
-      <div class="filter-section">
-        <strong>Filter by Meal Type:</strong><br />
-        <label><input type="checkbox" class="meal-filter" value="Pantry Bag Distribution" /> Pantry Bag</label><br />
-        <label><input type="checkbox" class="meal-filter" value="Breakfast" /> Breakfast</label><br />
-        <label><input type="checkbox" class="meal-filter" value="Lunch" /> Lunch</label><br />
-        <label><input type="checkbox" class="meal-filter" value="Dinner" /> Dinner</label><br />
-      </div>
-
-      <div class="filter-section">
+	  <!--	<div class="filter-section">
         <strong>Search by ZIP code:</strong><br />
         <input
           type="text"
           id="zip-search"
           class="search-input"
           placeholder="Enter ZIP"
-        />
-      </div>
+			   /></div>-->
+  </div>
 
-      <div class="filter-section">
-        <strong>Search by Agency Name:</strong><br />
-        <input
-          type="text"
-          id="agency-search"
-          class="search-input"
-          placeholder="Enter Agency Name"
-        />
-      </div>
 
+  <!-- LEFT FILTER OVERLAY -->
+  <div id="filter-pane">
+    <!--<div class="close-filter-pane" onclick="closeFilterPane()">X</div>-->
+	  <button class="close-filter-pane" onclick="closeFilterPane()" aria-label="Close filter panel">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+    <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  </svg>
+</button>
+    <h2>Find Food Near Me</h2>
+    
+	 
+		  
+		  <div class="filter-section search-zip">
+			<div class="filter-heading">Search by ZIP code:</div>
+        		<input
+				  type="text"
+				  id="zip-search"
+				  class="search-input"
+				  placeholder="Enter ZIP"
+				/>
+		</div> 
+		  
+		<div class="filter-section search-agency">
+			  <div class="filter-heading">Search by agency name:</div>
+				<input
+				  type="text"
+				  id="agency-search"
+				  class="search-input"
+				  placeholder="Enter Agency Name"
+				/>
+		</div>
+
+		   <div class="filters">
+		<div class="filter-section filter-group">
+        	<div class="filter-heading">Need food now? See what's open near you:</div>
+        	<label><input type="checkbox" id="open-now-checkbox" /> Open Now</label>
+		</div>
+		<div class="filter-section filter-group columns-wrap">
+			<div class="column one-half">
+        		<div class="filter-heading">Plan your week:</div>
+        		<label><input type="checkbox" class="day-filter" value="Monday" /> Monday</label>
+				<label><input type="checkbox" class="day-filter" value="Tuesday" /> Tuesday</label>
+				<label><input type="checkbox" class="day-filter" value="Wednesday" /> Wednesday</label>
+				<label><input type="checkbox" class="day-filter" value="Thursday" /> Thursday</label>
+				<label><input type="checkbox" class="day-filter" value="Friday" /> Friday</label>
+				<label><input type="checkbox" class="day-filter" value="Saturday" /> Saturday</label>
+				<label><input type="checkbox" class="day-filter" value="Sunday" /> Sunday</label>
+      		</div>
+			<div class="column one-half">
+      			<div class="filter-section">
+		  			<div class="filter-heading">What are you looking for?</div>
+					<label><div class="color-box pantry-bag"></div><input type="checkbox" class="meal-filter" value="Pantry Bag Distribution" /> Pantry Groceries</label>
+					<label><div class="color-box breakfast"></div><input type="checkbox" class="meal-filter" value="Breakfast" /> Breakfast</label>
+					<label><div class="color-box lunch"></div><input type="checkbox" class="meal-filter" value="Lunch" /> Lunch</label>
+					<label><div class="color-box dinner"></div><input type="checkbox" class="meal-filter" value="Dinner" /> Dinner</label>
+					<label style="margin-top:40px;"><div class="color-box multi-service"></div><span style="font-style:italic;">*Indicates Multi-Service Locations</span></label>
+				</div>
+			</div>
+		</div>
+		 
+		
+		
     </div>
   </div>
 
   <!-- RIGHT DETAILS PANE (Agency Info) -->
   <div id="details-pane">
-    <div class="close-pane" onclick="closeDetailsPane()">X</div>
+    <!--<div class="close-pane" onclick="closeDetailsPane()">X</div>-->
+	  <button class="close-filter-pane" onclick="closeDetailsPane()" aria-label="Close Details panel">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+    <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  </svg>
+</button>
     <div id="details-content">
       <p>Click a marker to view details.</p>
     </div>
@@ -563,8 +729,11 @@
 
     // FILTER PANE open/close
     const filterPane = document.getElementById("filter-pane");
-    document.getElementById("filter-button").addEventListener("click", () => filterPane.classList.add("open"));
-    function closeFilterPane() { filterPane.classList.remove("open"); }
+    document.getElementById("filter-button").addEventListener("click", () => {
+  filterPane.classList.add("open");
+  filterPane.classList.remove("close");
+});
+    function closeFilterPane() {filterPane.classList.remove("open"); filterPane.classList.add("close");}
     let filterStartX = 0;
     filterPane.addEventListener("touchstart", e => filterStartX = e.touches[0].clientX, { passive: true });
     filterPane.addEventListener("touchmove", e => {
@@ -653,5 +822,6 @@
       return hour*60 + min;
     }
   </script>
+	
 </body>
 </html>
