@@ -1,71 +1,267 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
+  <meta charset="utf-8" />
   <title>FBNYC Find Food Map</title>
-  <link rel="icon" href="lightning.png" type="image/x-icon">
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css"
-    crossorigin=""
-  />
+  <link rel="icon" href="lightning.png" type="image/x-icon" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	
+	<!-- Google Fonts -->
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+	
+
+  <!-- Mapbox + Papa Parse -->
+  <link href="https://api.mapbox.com/mapbox-gl-js/v2.13.0/mapbox-gl.css" rel="stylesheet" />
+  <script src="https://api.mapbox.com/mapbox-gl-js/v2.13.0/mapbox-gl.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
 
   <style>
+    /* Base resets, no page scrolling */
     html, body {
       margin: 0;
       padding: 0;
-      height: 100%;
-      font-family: Arial, sans-serif;
-      box-sizing: border-box;
-    }
-
-    #container {
-      display: flex;
-      flex-direction: row;
-      height: 100%;
       width: 100%;
+      height: 100%;
+      font-family: 'Public Sans', Arial, sans-serif; /* now using Public Sans */
+      box-sizing: border-box;
+      overflow: hidden;
+		color:#051F67;
+    }
+	  h1, h2, h3, .agency-name {
+  font-family: 'Public Sans', sans-serif;
+  font-weight: 800;
+}
+	  h2 {
+		  font-size:40px;
+		  margin-top: 0px;
+	  }
+
+body, p, label, button {
+  font-family: 'Public Sans', sans-serif;
+  font-weight: 400;
+}
+	  
+	  #filter-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px; /* space between text and icon */
+}
+
+#filter-toggle svg {
+  width: 1em;
+  height: 1em;
+  fill: currentColor; /* inherits the button’s text color */
+}
+
+    /* Scrollbar styling (Chrome/Safari/Edge) */
+    ::-webkit-scrollbar {
+      width: 8px;
+      background-color: #f0f0f0;
+    }
+    ::-webkit-scrollbar-thumb {
+      background-color: #999;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background-color: #666;
+    }
+    /* Firefox scrollbar */
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: #999 #f0f0f0;
     }
 
-    #map-container {
-      width: 70%;
-      position: relative;
-    }
-
-    #sidebar {
-      width: 30%;
-      border-left: 2px solid #ddd;
-      padding: 16px;
-      overflow-y: auto;
-      background-color: #FFFFFF;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      position: relative;
-    }
-    #sidebar h2 {
-      margin-top: 0;
-    }
-    #sidebar .info {
-      margin-bottom: 16px;
-    }
-    #sidebar .filters {
-      margin-top: 16px;
-    }
-
+    /* MAP occupies entire screen behind overlays */
     #map {
       width: 100%;
       height: 100%;
-      border: 2px solid #ccc;
-      box-sizing: border-box;
+      border: 2px solid #ccc; /* optional border */
     }
 
+    /* LEGEND pinned at bottom-left of map */
+    #legend {
+      position: absolute;
+      bottom: 20px; 
+      left: 20px;
+      z-index: 1000;
+      background: rgba(255,255,255,0.9);
+      padding: 24px;
+      border: 1px solid #ccc;
+      border-radius: 16px;
+      font-size: 1em;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+    .color-box {
+      width: 14px;
+      height: 14px;
+      margin-right: 8px;
+      border: 1px solid #333;
+		border-radius: 50%;
+    }
+	  .multi-service {
+		  background-color: #FFA500;
+	  }
+	  .pantry-bag {
+		  background-color: #8A2BE2;
+	  }
+	  .breakfast {
+		  background-color: #c04343;
+	  }
+	  .lunch {
+		  background-color: #3CB371;
+	  }
+	  .dinner {
+		  background-color: #4682B4;
+	  }
+	  
+
+    /* FILTER BUTTON in top-left corner */
+    #filter-button {
+      position: absolute;
+      top: 20px;
+      left: 25px;
+      z-index: 1100;
+      background-color: #FF5301;
+      color: #ffffff;
+      border: 0px solid #333;
+      border-radius: 24px;
+      padding: 16px 32px;
+      cursor: pointer;
+      font-size: 1.1em;
+      font-weight: bold;
+		box-shadow: 0px 4px 16px #000000;
+		transition: all 0.4s;
+    }
+    #filter-button:hover {
+      transform: scale(1.1);
+    }
+
+    /* On-map filter controls */
+    #map-filters {
+      position: absolute;
+      top: 85px;
+      left: 25px;
+      z-index: 1100;
+      background: #fff;
+      flex-direction: column;
+      padding: 14px 24px;
+      border: 3px solid #051F67;
+      border-radius: 30px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* 1) Make the checkbox itself larger */
+    #map-filters input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      margin-right: 8px;
+        }
+
+    /* 2) Force label contents to center-align vertically */
+    #map-filters label {
+      display: flex;
+      align-items: center;             /* vertical centering */
+      gap: 7px;  
+      font-size: 1.1em;                       /* optional: even spacing if you want */
+      font-weight: bold;
+    }
+
+    /* LEFT FILTER OVERLAY */
+    #filter-pane {
+      position: fixed;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      width: 460px;
+      max-width: 80%;
+      background: #fff;
+      z-index: 3000;
+      box-shadow: 2px 0 8px rgba(0,0,0,0.2);
+      overflow-y: auto;
+      padding: 5%;
+      transform: translateX(0%);
+      transition: transform 0.3s ease-in-out;
+    }
+    #filter-pane.open {
+      transform: translateX(0);
+    }
+	  #filter-pane.close {
+		  transform: translateX(-100%);
+	  }
+    .close-filter-pane {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      cursor: pointer;
+      font-size: 1.5em;
+      font-weight: bold;
+      color: #333;
+    }
+
+    /* RIGHT DETAILS PANE (Agency Info) */
+    #details-pane {
+      position: fixed;
+      top: 0;
+      bottom: 0;
+      right: 0;
+      width: 460px;
+      background: #fff;
+      z-index: 2000;
+      box-shadow: -2px 0 8px rgba(0,0,0,0.2);
+      overflow-y: auto;
+      padding: 5%;
+      transform: translateX(100%);
+      transition: transform 0.3s ease-in-out;
+    }
+    #details-pane.open {
+      transform: translateX(0);
+    }
+    @media (max-width: 900px) {
+      #details-pane {
+        width: 92%;
+      }
+    }
+    .close-pane {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      cursor: pointer;
+      font-size: 1.5em;
+      font-weight: bold;
+      color: #333;
+    }
+
+    /* Agency, phone, address */
+    .agency-name {
+      font-weight: bold;
+      margin-bottom: 24px;
+		font-size:26px;
+    }
+    .agency-address {
+      margin-bottom: 4px;
+		display: inline-block;
+    }
+	  
+    .agency-phone {
+      margin-bottom: 8px;
+    }
+
+    /* Table, button, etc. */
     table.pantry-table {
       border-collapse: collapse;
       width: 100%;
       margin-top: 8px;
     }
-    table.pantry-table th,
-    table.pantry-table td {
+    table.pantry-table th, table.pantry-table td {
       border: 1px solid #ccc;
       padding: 4px;
       font-size: 0.9em;
@@ -74,540 +270,558 @@
     table.pantry-table thead {
       background-color: #f0f0f0;
     }
-    .agency-name {
-      font-weight: bold;
-      text-align: center;
-      margin-bottom: 4px;
-    }
-    .agency-address {
-      margin-bottom: 8px;
-      text-align: center;
-    }
-
-    .leaflet-container {
-      cursor: default;
-    }
-    .leaflet-marker-icon:hover {
-      cursor: pointer;
-    }
-
-    #legend {
-      position: absolute;
-      bottom: 20px;
-      left: 20px;
-      z-index: 1000;
-      background: rgba(255, 255, 255, 0.9);
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-      font-size: 0.9em;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    }
-    
-    #legend .legend-item {
+    .button-container {
       display: flex;
-      align-items: center;
-      margin-bottom: 4px;
+      margin: 12px 0;
+      padding-bottom: 25px;
     }
-    #legend .color-box {
-      width: 12px;
-      height: 12px;
-      margin-right: 8px;
-      border: 1px solid #333;
+    #directions-button {
+    padding: 12px 24px;
+    font-size: 1em;
+    background-color: #FF5301;
+    color: white;
+    border: none;
+    border-radius: 24px;
+    cursor: pointer;
+    }
+    #directions-button:hover {
+      background-color: #051F67;
     }
 
+    /* FILTERS */
+    .filters { margin: 12px 0; }
+ 
     .search-input {
       margin-bottom: 8px;
-      padding: 6px;
+      margin-top: 5px;
+      padding: 16px;
       width: 100%;
+      max-width: 100%;
       box-sizing: border-box;
+		border:1px solid #A2A9B0;
+		border-radius: 4px;
+		font-size:16px;
+		
+		
     }
+	  /*.search-zip, .search-agency {
+		  width:49%;
+		  float:left;
+	  }
+	  .search-zip {
+		  margin-right:2%;
+	  }*/
+	  .filter-heading {
+		  font-weight: bold;
+		  display: block;
+		  margin-bottom:8px;
+	  }
+	  .filter-section label {
+		      display: flex;
+    margin-bottom: 4px;
 
-    .filter-section {
-      margin-bottom: 12px;
-    }
-
-    #logo {
-      position: absolute;
-      bottom: 20px;
-      right: 25px;
-      width: 150px;
-    }
-
-    .button-container {
-  display: flex;
-  justify-content: center;
-  margin: 12px 0;
-  padding-bottom: 25px;
+    flex-direction: row;
+    align-items: center;
 }
-
-#directions-button {
-  padding: 8px 16px;
-  font-size: 1em;
-  background-color: #007bff;
-  color: white;
+	  
+	.filter-group {
+    padding: 26px;
+    margin-bottom: 10px;
+    border-radius: 16px;
+    background: #f7f7f7;
+	  }
+	  .columns-wrap {
+    display: flex;
+    justify-content: flex-start;
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+	  .column.one-half {
+		  flex: 1 1 200px; /* equal width until they hit 200px, then wrap */
+	  }
+	  .close-filter-pane {
+  background: none;
   border: none;
-  border-radius: 4px;
   cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+  color: #333; /* icon color */
 }
 
-#directions-button:hover {
-  background-color: #0056b3;
+.close-filter-pane:hover {
+  background-color: rgba(0, 0, 0, 0.08);
 }
 
+    /* SITE MARKERS */
+    .site-marker {
+      width: 24px;
+      height: 24px;
+      border: 3px solid #333;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+    @media (max-width: 900px) {
+      .site-marker {
+        width: 24px !important;
+        height: 24px !important;
+      }
+    }
+	  
+	
+/* Example: make sure it stays visible in desktop layout */
+@media (max-width: 1024px) {
+  #filter-pane {
+      transform: translateX(-100%);
+  }
+}
   </style>
 </head>
 <body>
-  <div id="container">
-    <div id="map-container">
-      <div id="map"></div>
-      <div id="legend">
-        <div class="legend-item">
-          <div class="color-box" style="background-color: #FFA500;"></div> Multi-Service
-        </div>
-        <div class="legend-item">
-          <div class="color-box" style="background-color: #8A2BE2;"></div> Pantry Bag 
-        </div>
-        <div class="legend-item">
-          <div class="color-box" style="background-color: #c04343;"></div> Breakfast
-        </div>
-        <div class="legend-item">
-          <div class="color-box" style="background-color: #3CB371;"></div> Lunch
-        </div>
-        <div class="legend-item">
-          <div class="color-box" style="background-color: #4682B4;"></div> Dinner
-        </div>
-      </div>
-      
+
+  <!-- MAP -->
+  <div id="map"></div>
+
+  <!-- LEGEND pinned -->
+  <div id="legend">
+    <div class="legend-item">
+      <div class="color-box multi-service"></div> Multi-Service
     </div>
-
-    <div id="sidebar">
-      <div>
-        <h2>Find Food</h2>
-        <div class="info" id="info-text">Click on a marker to view details here.</div>
-        <div id="details"></div>
-      </div>
-
-      <!-- Filters Section -->
-      <div class="filters">
-        <div class="filter-section">
-          <input
-            type="text"
-            id="zip-search"
-            class="search-input"
-            placeholder="Search by ZIP code"
-          />
-        </div>
-
-        <div class="filter-section">
-          <strong>Filter by Day of the Week:</strong><br />
-          <label><input type="checkbox" class="day-filter" value="Monday" /> Monday</label><br />
-          <label><input type="checkbox" class="day-filter" value="Tuesday" /> Tuesday</label><br />
-          <label><input type="checkbox" class="day-filter" value="Wednesday" /> Wednesday</label><br />
-          <label><input type="checkbox" class="day-filter" value="Thursday" /> Thursday</label><br />
-          <label><input type="checkbox" class="day-filter" value="Friday" /> Friday</label><br />
-          <label><input type="checkbox" class="day-filter" value="Saturday" /> Saturday</label><br />
-          <label><input type="checkbox" class="day-filter" value="Sunday" /> Sunday</label>
-        </div>
-
-        <div class="filter-section">
-          <strong>Filter by Meal Type:</strong><br />
-          <label><input type="checkbox" class="meal-filter" value="Pantry Bag Distribution" /> Pantry Bag</label><br />
-          <label><input type="checkbox" class="meal-filter" value="Breakfast" /> Breakfast</label><br />
-          <label><input type="checkbox" class="meal-filter" value="Lunch" /> Lunch</label><br />
-          <label><input type="checkbox" class="meal-filter" value="Dinner" /> Dinner</label><br />
-        </div>
-      </div>
-      <!-- Logo -->
-      <img id="logo" src="images/logo.jpg" alt="FBNYC Logo">
+    <div class="legend-item">
+      <div class="color-box pantry-bag"></div> Pantry Groceries
+    </div>
+    <div class="legend-item">
+      <div class="color-box breakfast"></div> Breakfast
+    </div>
+    <div class="legend-item">
+      <div class="color-box lunch"></div> Lunch
+    </div>
+    <div class="legend-item">
+      <div class="color-box dinner"></div> Dinner
     </div>
   </div>
 
-  <script
-    src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"
-    crossorigin=""
-  ></script>
+  <!-- FILTER BUTTON (top-left) -->
+  <button id="filter-button">Filters <svg xmlns="http://www.w3.org/2000/svg" 
+       viewBox="0 0 448 512" 
+       width="16" height="16" 
+       aria-hidden="true" 
+       focusable="false" 
+       style="margin-left:8px; vertical-align:middle; fill:currentColor;">
+    <path d="M0 80c0-8.8 7.2-16 16-16h80V48c0-26.5 21.5-48 
+             48-48s48 21.5 48 48v16h240c8.8 0 16 7.2 
+             16 16s-7.2 16-16 16H192v16c0 26.5-21.5 
+             48-48 48s-48-21.5-48-48V96H16c-8.8 0-16-7.2-16-16zm0 
+             176c0-8.8 7.2-16 16-16h272v-16c0-26.5 
+             21.5-48 48-48s48 21.5 48 48v16h48c8.8 0 
+             16 7.2 16 16s-7.2 16-16 16h-48v16c0 
+             26.5-21.5 48-48 48s-48-21.5-48-48v-16H16c-8.8 
+             0-16-7.2-16-16zm0 176c0-8.8 7.2-16 16-16h144v-16c0-26.5 
+             21.5-48 48-48s48 21.5 48 48v16h176c8.8 
+             0 16 7.2 16 16s-7.2 16-16 16H256v16c0 
+             26.5-21.5 48-48 48s-48-21.5-48-48v-16H16c-8.8 
+             0-16-7.2-16-16z"/>
+  </svg></button>
 
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
+  <!-- ON-MAP FILTERS (top-right) -->
+  <div id="map-filters">
+    <label>
+      <input type="checkbox" id="map-open-now-checkbox" />
+      Open Now
+    </label>
+	  <!--	<div class="filter-section">
+        <strong>Search by ZIP code:</strong><br />
+        <input
+          type="text"
+          id="zip-search"
+          class="search-input"
+          placeholder="Enter ZIP"
+			   /></div>-->
+  </div>
+
+
+  <!-- LEFT FILTER OVERLAY -->
+  <div id="filter-pane">
+    <!--<div class="close-filter-pane" onclick="closeFilterPane()">X</div>-->
+	  <button class="close-filter-pane" onclick="closeFilterPane()" aria-label="Close filter panel">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+    <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  </svg>
+</button>
+    <h2>Find Food Near Me</h2>
+    
+	 
+		  
+		  <div class="filter-section search-zip">
+			<div class="filter-heading">Search by ZIP code:</div>
+        		<input
+				  type="text"
+				  id="zip-search"
+				  class="search-input"
+				  placeholder="Enter ZIP"
+				/>
+		</div> 
+		  
+		<div class="filter-section search-agency">
+			  <div class="filter-heading">Search by agency name:</div>
+				<input
+				  type="text"
+				  id="agency-search"
+				  class="search-input"
+				  placeholder="Enter Agency Name"
+				/>
+		</div>
+
+		   <div class="filters">
+		<div class="filter-section filter-group">
+        	<div class="filter-heading">Need food now? See what's open near you:</div>
+        	<label><input type="checkbox" id="open-now-checkbox" /> Open Now</label>
+		</div>
+		<div class="filter-section filter-group columns-wrap">
+			<div class="column one-half">
+        		<div class="filter-heading">Plan your week:</div>
+        		<label><input type="checkbox" class="day-filter" value="Monday" /> Monday</label>
+				<label><input type="checkbox" class="day-filter" value="Tuesday" /> Tuesday</label>
+				<label><input type="checkbox" class="day-filter" value="Wednesday" /> Wednesday</label>
+				<label><input type="checkbox" class="day-filter" value="Thursday" /> Thursday</label>
+				<label><input type="checkbox" class="day-filter" value="Friday" /> Friday</label>
+				<label><input type="checkbox" class="day-filter" value="Saturday" /> Saturday</label>
+				<label><input type="checkbox" class="day-filter" value="Sunday" /> Sunday</label>
+      		</div>
+			<div class="column one-half">
+      			<div class="filter-section">
+		  			<div class="filter-heading">What are you looking for?</div>
+					<label><div class="color-box pantry-bag"></div><input type="checkbox" class="meal-filter" value="Pantry Bag Distribution" /> Pantry Groceries</label>
+					<label><div class="color-box breakfast"></div><input type="checkbox" class="meal-filter" value="Breakfast" /> Breakfast</label>
+					<label><div class="color-box lunch"></div><input type="checkbox" class="meal-filter" value="Lunch" /> Lunch</label>
+					<label><div class="color-box dinner"></div><input type="checkbox" class="meal-filter" value="Dinner" /> Dinner</label>
+					<label style="margin-top:40px;"><div class="color-box multi-service"></div><span style="font-style:italic;">*Indicates Multi-Service Locations</span></label>
+				</div>
+			</div>
+		</div>
+		 
+		
+		
+    </div>
+  </div>
+
+  <!-- RIGHT DETAILS PANE (Agency Info) -->
+  <div id="details-pane">
+    <!--<div class="close-pane" onclick="closeDetailsPane()">X</div>-->
+	  <button class="close-filter-pane" onclick="closeDetailsPane()" aria-label="Close Details panel">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+    <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  </svg>
+</button>
+    <div id="details-content">
+      <p>Click a marker to view details.</p>
+    </div>
+  </div>
 
   <script>
-    let allData = []; // Store all parsed data
-    let filteredData = []; // Store data after filtering
+    // Mapbox token 
+    mapboxgl.accessToken = "pk.eyJ1IjoiYXJuYXZrcmlzaG5hIiwiYSI6ImNtNXlhc285dTBoNGwybnB4NDRyZ2phNXgifQ.Q1UhzlIAHhPma35DGkdEeg";
 
-    const map = L.map('map', {
-      minZoom: 11, // Prevent zooming out too much
-      maxZoom: 19
-    }).setView([40.7128, -74.0060], 12);
+    let allData = [], filteredData = [];
+    let allLocations = {};
+    let markers = [];
+    let highlighted = null;
+    let userMarker;
+    let lastPos = null;
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution:
-        '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
-    }).addTo(map);
+    const map = new mapboxgl.Map({
+      container: "map",
+      style: "mapbox://styles/mapbox/streets-v11",
+      center: [-74.0060, 40.7128],
+      zoom: 12
+    });
 
-    if ('geolocation' in navigator) {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            const { latitude, longitude } = position.coords;
-      
-            // NYC bounding box (approximate)
-            const nycBounds = {
-              minLat: 40.4774,
-              maxLat: 40.9176,
-              minLng: -74.2591,
-              maxLng: -73.7004
-            };
-      
-            // Check if user is within NYC bounds
-            if (
-              latitude >= nycBounds.minLat &&
-              latitude <= nycBounds.maxLat &&
-              longitude >= nycBounds.minLng &&
-              longitude <= nycBounds.maxLng
-            ) {
-              map.setView([latitude, longitude], 14);
-            } else {
-              console.warn('User is outside NYC. Defaulting to NYC.');
-              map.setView([40.7128, -74.0060], 11);
-            }
-          },
-          (error) => {
-            console.warn('Geolocation denied or unavailable:', error);
-            map.setView([40.7128, -74.0060], 11); // Default to NYC if geolocation fails
-          }
-        );
-      } else {
-        map.setView([40.7128, -74.0060], 11); // Default to NYC if geolocation is not supported
-      }
-      if ('geolocation' in navigator) {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            const { latitude, longitude } = position.coords;
-    
-            // Add user location pin
-            const userMarker = L.circleMarker([latitude, longitude], {
-              radius: 10,
-              fillColor: "#007BFF", // Light blue
-              color: "#F0F0F0",     // White border
-              weight: 3,
-              opacity: 1,
-              fillOpacity: 1
-            }).addTo(map).bindPopup("You are here").openPopup();
-    
-            // NYC bounding box (approximate)
-            const nycBounds = {
-              minLat: 40.4774,
-              maxLat: 40.9176,
-              minLng: -74.2591,
-              maxLng: -73.7004
-            };
-    
-            // Check if user is within NYC bounds
-            if (
-              latitude >= nycBounds.minLat &&
-              latitude <= nycBounds.maxLat &&
-              longitude >= nycBounds.minLng &&
-              longitude <= nycBounds.maxLng
-            ) {
-              map.setView([latitude, longitude], 14);
-            } else {
-              console.warn('User is outside NYC. Defaulting to NYC.');
-              map.setView([40.7128, -74.0060], 11);
-            }
-          },
-          (error) => {
-            console.warn('Geolocation denied or unavailable:', error);
-            map.setView([40.7128, -74.0060], 11); // Default to NYC if geolocation fails
-          }
-        );
-    } else {
-        map.setView([40.7128, -74.0060], 11); // Default to NYC if geolocation is not supported
+
+    navigator.geolocation.watchPosition(
+      (pos) => {
+        const { latitude, longitude, accuracy } = pos.coords;
+        let maxAcc = accuracy <= 15 ? 15 : 50;
+        if (accuracy > maxAcc) return;
+        if (lastPos) {
+          const dist = getDistanceMeters(
+            lastPos.latitude, lastPos.longitude,
+            latitude, longitude
+          );
+          if (dist < 2) return;
+        }
+        lastPos = { latitude, longitude };
+        if (userMarker) {
+          userMarker.setLngLat([longitude, latitude]);
+        } else {
+          map.setCenter([longitude, latitude]);
+          map.setZoom(14);
+          userMarker = new mapboxgl.Marker({ color: "#007BFF" })
+            .setLngLat([longitude, latitude])
+            .addTo(map);
+        }
+      },
+      (err) => console.warn("Geolocation error:", err),
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
+    );
+
+    function getDistanceMeters(lat1, lon1, lat2, lon2) {
+      const toRad = d => d * Math.PI / 180;
+      const R = 6371000;
+      const φ1 = toRad(lat1), φ2 = toRad(lat2);
+      const Δφ = toRad(lat2 - lat1), Δλ = toRad(lon2 - lon1);
+      const a = Math.sin(Δφ/2)**2 +
+                Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2)**2;
+      return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
     }
-    
 
-    const csvUrl =
-      "https://fbnycstorage1.blob.core.windows.net/mapdata/FBNCYAgencyDaysandHoursViewResults476.csv?sv=2022-11-02&ss=bf&srt=sco&sp=rtfx&se=2100-01-08T04:34:50Z&st=2025-01-07T20:34:50Z&spr=https&sig=BDKOs4eQcUvckRRSXr5W0OQ0bGkSlZDAQ9r%2FbvXOUxA%3D";
-
+    // Load CSV
+    const csvUrl = "https://fbnycpublic.blob.core.windows.net/mapdata/customsearch_agency_map_data.csv?sv=2022-11-02&ss=bfqt&srt=sco&sp=rptfx&se=2050-01-18T03:56:20Z&st=2025-01-17T19:56:20Z&spr=https&sig=u41iVNckMwY%2Fkx76wPlA6CfSUzP9Ls4PUijuBfSsWAY%3D";
     Papa.parse(csvUrl, {
       download: true,
       header: true,
       complete: (results) => {
         allData = results.data.filter((row) => row["Inactive"] === "No");
+        allLocations = groupByLocation(allData);
         filteredData = allData;
-        addCircleMarkers(filteredData);
-      },
-      error: (err) => {
-        console.error("Error parsing CSV:", err);
+        addMarkers(filteredData);
       }
     });
 
-    function addCircleMarkers(data) {
-      map.eachLayer((layer) => {
-        if (layer instanceof L.CircleMarker) map.removeLayer(layer);
+    function groupByLocation(rows) {
+      const obj = {};
+      rows.forEach((r) => {
+        const lat = parseFloat(r["Latitude"]||"0").toFixed(8);
+        const lng = parseFloat(r["Longitude"]||"0").toFixed(8);
+        const key = `${lat},${lng}`;
+        if (!obj[key]) obj[key] = [];
+        obj[key].push(r);
       });
+      return obj;
+    }
 
-      data.forEach((row) => {
-        const lat = parseFloat(row["Latitude"]);
-        const lng = parseFloat(row["Longitude"]);
-        if (isNaN(lat) || isNaN(lng)) return;
-
-        const mealType = row["Meal Type"] || "Pantry Bag Distribution";
-        const color = getMealColor(mealType);
-
-        const marker = L.circleMarker([lat, lng], {
-          radius: 5,
-          fillColor: color,
-          color: "#333",
-          weight: 1,
-          opacity: 1,
-          fillOpacity: 1
-        }).addTo(map);
-
-        marker.on("click", () => {
-          updateSideBar(row["Agency"], row);
+    function addMarkers(data) {
+      markers.forEach(m => m.marker.remove());
+      markers = [];
+      const subset = groupByLocation(data);
+      for (const locationKey in subset) {
+        const agencies = subset[locationKey];
+        const [lat, lng] = locationKey.split(",").map(parseFloat);
+        if (isNaN(lat) || isNaN(lng)) continue;
+        const color = getColorForGroup(agencies);
+        const el = document.createElement("div");
+        el.className = "site-marker";
+        el.style.backgroundColor = color;
+        const marker = new mapboxgl.Marker(el)
+          .setLngLat([lng, lat])
+          .addTo(map);
+        markers.push({ marker, color, el, locationKey });
+        el.addEventListener("click", () => {
+          toggleMarker(marker, color, locationKey);
         });
-      });
+      }
     }
 
+    function getColorForGroup(agencies) {
+      const mealTypes = new Set();
+      agencies.forEach(a => mealTypes.add((a["Meal Type"]||"").toLowerCase()));
+      if (mealTypes.size > 1) return "#FFA500";
+      return getMealColor(agencies[0]["Meal Type"]);
+    }
     function getMealColor(mealType) {
-      const typeLower = mealType.toLowerCase();
-      if (typeLower.includes("pantry bag distribution")) return "#8A2BE2"; // Purple for Pantry Bag
-      if (typeLower.includes("breakfast")) return "#c04343";
-      if (typeLower.includes("lunch")) return "#3CB371";
-      if (typeLower.includes("dinner")) return "#4682B4";
-      return "#FFA500"; // Default to Orange for Multi-Service
-    }
-    
-
-    function updateSideBar(agency, row) {
-      document.getElementById("info-text").style.display = "none";
-      const html = buildSideBarContent(agency, row);
-      document.getElementById("details").innerHTML = html;
+      const t = (mealType||"").toLowerCase();
+      if (t.includes("pantry bag")) return "#8A2BE2";
+      if (t.includes("breakfast")) return "#c04343";
+      if (t.includes("lunch")) return "#3CB371";
+      if (t.includes("dinner")) return "#4682B4";
+      return "#FFA500";
     }
 
-    function buildSideBarContent(agency, row) {
-      const agencyName = agency.split(":")[1]?.trim() || agency; // Take only the part after the colon
-      const address1 = row["Address 1"] || "";
-      const address2 = row["Address 2"] || "";
-      const address4 = row["Address 4"] || ""; // Assuming Address 4 contains the ZIP code
-      const fullAddress = `${agencyName}, ${address1}, ${address2}, ${address4}`.trim();
-    
+    function toggleMarker(marker, originalColor, locationKey) {
+      if (highlighted && highlighted.marker === marker) {
+        revertHighlight();
+        closeDetailsPane();
+      } else {
+        revertHighlight();
+        highlightMarker(marker, originalColor);
+        openDetailsPane(allLocations[locationKey] || []);
+      }
+    }
+    function highlightMarker(marker, originalColor) {
+      const el = marker.getElement();
+      el.style.width = "24px";
+      el.style.height = "24px";
+      el.style.backgroundColor = "#FF3333";
+      el.style.border = "3px solid #FFF";
+      highlighted = { marker, el, color: originalColor };
+    }
+    function revertHighlight() {
+      if (!highlighted) return;
+      highlighted.el.style.width = "24px";
+      highlighted.el.style.height = "24px";
+      highlighted.el.style.backgroundColor = highlighted.color;
+      highlighted.el.style.border = "3px solid #333";
+      highlighted = null;
+    }
+
+    const detailsPane = document.getElementById("details-pane");
+    const detailsContent = document.getElementById("details-content");
+    detailsPane.addEventListener("touchstart", e => startX = e.touches[0].clientX, { passive: true });
+    detailsPane.addEventListener("touchmove", e => {
+      if (e.touches[0].clientX - startX > 50) closeDetailsPane();
+    }, { passive: true });
+
+    function openDetailsPane(agencies) {
+      detailsContent.innerHTML = buildAgencyHTML(agencies);
+      detailsPane.classList.add("open");
+    }
+    function closeDetailsPane() {
+      detailsPane.classList.remove("open");
+    }
+    function buildAgencyHTML(agencies) {
+      if (!agencies.length) return "<p>No agency data.</p>";
+      const dayOrder = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+      agencies.sort((a,b) => {
+        const d = dayOrder.indexOf(a["Day of the Week"]) - dayOrder.indexOf(b["Day of the Week"]);
+        return d !== 0 ? d : (a["Meal Type"]||"").localeCompare(b["Meal Type"]||"");
+      });
+      const first = agencies[0];
+      const agencyName = first["Agency"]?.split(":")[1]?.trim() || first["Agency"] || "";
+      const address1 = first["Address 1"] || "";
+      const address4 = first["Address 4"] || "";
+      const phone = first["Phone"] || "";
+      const fullAddress = `${address1}, ${address4}${agencyName ? ", "+agencyName : ""}`.trim();
+      let rows = "";
+      agencies.forEach(r => {
+        rows += `
+          <tr>
+            <td>${r["Day of the Week"]||""}</td>
+            <td>${r["Meal Type"]||""}</td>
+            <td>${r["Frequency"]||""}</td>
+            <td>${r["Opening Hour"]||""}</td>
+            <td>${r["Closing Hour"]||""}</td>
+          </tr>`;
+      });
       return `
         <div class="agency-name">${agencyName}</div>
         <div class="agency-address">${address1}</div>
-        <div class="agency-address">${address2}</div>
-        <div class="agency-address">${row["Address 3"] || ""}</div>
         <div class="agency-address">${address4}</div>
+        <div class="agency-phone">${phone}</div>
         <div class="button-container">
           <button id="directions-button" onclick="getDirections('${fullAddress}')">Get Directions</button>
         </div>
         <table class="pantry-table">
           <thead>
             <tr>
-              <th>Day</th>
-              <th>Open</th>
-              <th>Close</th>
-              <th>Frequency</th>
-              <th>24/7</th>
-              <th>Meal Type</th>
+              <th>Day</th><th>Meal Type</th><th>Frequency</th><th>Open</th><th>Close</th>
             </tr>
           </thead>
-          <tbody>
-            <tr>
-              <td>${row["Day of the Week"] || ""}</td>
-              <td>${row["Opening Hour"] || ""}</td>
-              <td>${row["Closing Hour"] || ""}</td>
-              <td>${row["Frequency"] || ""}</td>
-              <td>${row["24/7"] || ""}</td>
-              <td>${row["Meal Type"] || "Pantry Bag Distribution"}</td>
-            </tr>
-          </tbody>
-        </table>
-      `;
+          <tbody>${rows}</tbody>
+        </table>`;
     }
-    
-    let highlightedMarker = null; // Track the currently selected marker
+    function getDirections(addr) {
+      window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}`, "_blank");
+    }
 
-    function groupByLocation(data) {
-      const locationGroups = {};
-    
-      data.forEach((row) => {
-        // Round latitude and longitude to 4 decimal places to group nearby points
-        const lat = parseFloat(row["Latitude"]).toFixed(8);
-        const lng = parseFloat(row["Longitude"]).toFixed(8);
-        const key = `${lat},${lng}`;
-    
-        if (!locationGroups[key]) {
-          locationGroups[key] = [];
-        }
-        locationGroups[key].push(row);
-      });
-    
-      return locationGroups;
-    }
-    
-    function addCircleMarkers(data) {
-      map.eachLayer((layer) => {
-        if (layer instanceof L.CircleMarker) map.removeLayer(layer);
-      });
-    
-      const locationGroups = groupByLocation(data);
-    
-      Object.entries(locationGroups).forEach(([key, agencies]) => {
-        const [lat, lng] = key.split(",").map(parseFloat);
-    
-        // Check if lat or lng is NaN (invalid)
-        if (isNaN(lat) || isNaN(lng)) {
-          console.warn("Skipping invalid location:", key, agencies);
-          return;
-        }
-    
-        const isMultiService = agencies.length > 1;
-        const color = isMultiService ? "#FFA500" : getMealColor(agencies[0]["Meal Type"]);
-    
-        const marker = L.circleMarker([lat, lng], {
-          radius: 5,
-          fillColor: color,
-          color: "#333",
-          weight: 1,
-          opacity: 1,
-          fillOpacity: 1
-        }).addTo(map);
-        
-        marker.on("click", () => {
-          if (highlightedMarker) {
-            // Reset the previous highlighted marker and bring it to the back
-            highlightedMarker.setStyle({
-              radius: 5,
-              fillColor: highlightedMarker.options.originalColor,
-              weight: 1
-            }).bringToBack();
-          }
-        
-          // Set style for the selected marker, increase radius, and bring it to the front
-          marker.setStyle({
-            radius: 12,
-            fillColor: "#FB4945", // Red center
-            color: "#F0F0F0",     // White border
-            weight: 3
-          }).bringToFront();
-        
-          marker.options.originalColor = color; // Store original color for reset
-          highlightedMarker = marker;
-        
-          updateSideBarForLocation(agencies);
-        });
-        
-      });
-    }
-    
-    
-    function updateSideBarForLocation(agencies) {
-      document.getElementById("info-text").style.display = "none";
-    
-      const firstAgency = agencies[0];
-      const agencyName = firstAgency["Agency"].split(":")[1]?.trim() || firstAgency["Agency"];
-      const address1 = firstAgency["Address 1"] || "";
-      const address4 = firstAgency["Address 4"] || "";
-    
-      // Prioritize Address 1 and Address 4 for Google Maps
-      const fullAddress = `${address1}, ${address4}${agencyName ? `, ${agencyName}` : ""}`.trim();
-    
-      // Sort by day of the week, then by Meal Type
-      const dayOrder = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-      agencies.sort((a, b) => {
-        const dayComparison = dayOrder.indexOf(a["Day of the Week"]) - dayOrder.indexOf(b["Day of the Week"]);
-        if (dayComparison !== 0) return dayComparison;
-        return (a["Meal Type"] || "").localeCompare(b["Meal Type"] || "");
-      });
-    
-      let tableRows = "";
-      agencies.forEach((row) => {
-        tableRows += `
-          <tr>
-            <td>${row["Day of the Week"] || ""}</td>
-            <td>${row["Meal Type"] || ""}</td>
-            <td>${row["Frequency"] || ""}</td>
-            <td>${row["Opening Hour"] || ""}</td>
-            <td>${row["Closing Hour"] || ""}</td>
-          </tr>
-        `;
-      });
-    
-      const html = `
-        <div class="agency-name">${agencyName}</div>
-        <div class="agency-address">${address1}</div>
-        <div class="agency-address">${address4}</div>
-        <div class="button-container">
-          <button id="directions-button" onclick="getDirections('${fullAddress}')">Get Directions</button>
-        </div>
-        <table class="pantry-table">
-          <thead>
-            <tr>
-              <th>Day</th>
-              <th>Meal Type</th>
-              <th>Frequency</th>
-              <th>Open</th>
-              <th>Close</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${tableRows}
-          </tbody>
-        </table>
-      `;
-    
-      document.getElementById("details").innerHTML = html;
-    }
-    
-    
-    
-map.on("zoomend", () => {
-  const currentZoom = map.getZoom();
-  const newRadius = Math.max(3, currentZoom - 6); // Dynamically adjust radius
-  map.eachLayer((layer) => {
-    if (layer instanceof L.CircleMarker) {
-      layer.setStyle({ radius: newRadius });
-    }
-  });
+    // FILTER PANE open/close
+    const filterPane = document.getElementById("filter-pane");
+    document.getElementById("filter-button").addEventListener("click", () => {
+  filterPane.classList.add("open");
+  filterPane.classList.remove("close");
 });
+    function closeFilterPane() {filterPane.classList.remove("open"); filterPane.classList.add("close");}
+    let filterStartX = 0;
+    filterPane.addEventListener("touchstart", e => filterStartX = e.touches[0].clientX, { passive: true });
+    filterPane.addEventListener("touchmove", e => {
+      if (filterStartX - e.touches[0].clientX > 50) closeFilterPane();
+    }, { passive: true });
 
-    
-    function getDirections(address) {
-      const encodedAddress = encodeURIComponent(address);
-      const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
-      window.open(mapsUrl, '_blank');
+    // Filter UI elements
+    const zipInput = document.getElementById("zip-search");
+    const agencyInput = document.getElementById("agency-search");
+    document.querySelectorAll(".day-filter, .meal-filter").forEach(cb => cb.addEventListener("change", applyFilters));
+    zipInput.addEventListener("input", applyFilters);
+    agencyInput.addEventListener("input", applyFilters);
+    const openNowCb = document.getElementById("open-now-checkbox");
+    openNowCb.addEventListener("change", applyFilters);
+
+  
+    const mapOpenNowCheckbox = document.getElementById("map-open-now-checkbox");
+
+    // same for "Open Now"
+    mapOpenNowCheckbox.addEventListener("change", () => {
+      openNowCb.checked = mapOpenNowCheckbox.checked;
+      applyFilters();
+    });
+    openNowCb.addEventListener("change", () => {
+      mapOpenNowCheckbox.checked = openNowCb.checked;
+    });
+
+    // Apply filters + re-draw
+    function applyFilters() {
+      const zipVal       = zipInput.value.trim();
+      const agencyVal    = agencyInput.value.trim().toLowerCase();
+      const selectedDays = Array.from(document.querySelectorAll(".day-filter:checked")).map(cb => cb.value);
+      const selectedMeals= Array.from(document.querySelectorAll(".meal-filter:checked")).map(cb => cb.value);
+      const isOpenNow    = openNowCb.checked;
+
+      const todayDayName = new Date().toLocaleString("en-US", { weekday: "long" });
+      const nowMinutes   = getNowInMinutes();
+
+      filteredData = allData.filter(row => {
+        const day    = (row["Day of the Week"]||"").trim();
+        const meal   = (row["Meal Type"]||"Pantry Bag Distribution").trim();
+        const zipFld = (row["Address 4"]||"").trim();
+        const agencyFld = (row["Agency"]||"").toLowerCase();
+
+        const zipCheck    = !zipVal || zipFld.includes(zipVal);
+        const dayCheck    = !selectedDays.length || selectedDays.includes(day);
+        const mealCheck   = !selectedMeals.length || selectedMeals.includes(meal);
+        const agencyCheck = !agencyVal || agencyFld.includes(agencyVal);
+
+        let openNowCheck = true;
+        if (isOpenNow) {
+          openNowCheck = false;
+          if (row["Frequency"]==="Weekly" && day===todayDayName) {
+            const openTime  = parseTime12Hr(row["Opening Hour"]);
+            const closeTime = parseTime12Hr(row["Closing Hour"]);
+            if (openTime!==null && closeTime!==null &&
+                nowMinutes>=openTime && nowMinutes<closeTime) {
+              openNowCheck = true;
+            }
+          }
+        }
+
+        return zipCheck && dayCheck && mealCheck && agencyCheck && openNowCheck;
+      });
+
+      addMarkers(filteredData);
+      revertHighlight();
+      closeDetailsPane();
     }
-    
 
-    document.getElementById("zip-search").addEventListener("input", (e) => {
-      const zip = e.target.value.trim();
-      applyFilters(zip);
-    });
+    function getNowInMinutes() {
+      const now = new Date();
+      return now.getHours()*60 + now.getMinutes();
+    }
 
-    document.querySelectorAll(".day-filter, .meal-filter").forEach((checkbox) => {
-      checkbox.addEventListener("change", () => {
-        applyFilters(document.getElementById("zip-search").value.trim());
-      });
-    });
-
-    function applyFilters(zip) {
-      const selectedDays = Array.from(document.querySelectorAll(".day-filter:checked")).map((cb) => cb.value);
-      const selectedMeals = Array.from(document.querySelectorAll(".meal-filter:checked")).map((cb) => cb.value);
-
-      filteredData = allData.filter((row) => {
-        const matchesZip = zip === "" || row["Address 4"].includes(zip);
-        const matchesDay = selectedDays.length === 0 || selectedDays.includes(row["Day of the Week"]);
-        const matchesMeal = selectedMeals.length === 0 || selectedMeals.includes(row["Meal Type"] || "Pantry Bag Distribution");
-        return matchesZip && matchesDay && matchesMeal;
-      });
-
-      if (zip === "" && selectedDays.length === 0 && selectedMeals.length === 0) {
-        filteredData = allData;
-      }
-
-      addCircleMarkers(filteredData);
+    function parseTime12Hr(timeStr) {
+      if (!timeStr) return null;
+      const parts = timeStr.trim().split(" ");
+      if (parts.length<2) return null;
+      let [timePart, ampm] = parts;
+      let [hourStr, minStr] = timePart.split(":");
+      let hour = parseInt(hourStr,10), min = parseInt(minStr,10)||0;
+      ampm = ampm.toUpperCase();
+      if (ampm==="PM" && hour<12) hour+=12;
+      if (ampm==="AM" && hour===12) hour=0;
+      return hour*60 + min;
     }
   </script>
+	
 </body>
 </html>
