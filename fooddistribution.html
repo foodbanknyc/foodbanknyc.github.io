@@ -18,23 +18,28 @@
     h1 { text-align: center; margin-top: -28px; margin-bottom: 0px; font-weight: 520; font-size: 2.7rem}
     h2 { text-align: center; margin-top: 0px; margin-bottom: 1px; font-weight: 420; font-size: .9rem; }
     #messages { text-align: center; margin-bottom: 20px; font-style: italic; color: #5d5c5c; }
+
     /* Time Filters */
     #time-filter-container { text-align: center; margin: 20px auto; }
     #time-filter-container select { margin: 0 10px; padding: 4px 8px; }
+
     /* Card Container */
     #cards-container { display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; margin: 30px auto; max-width: 800px; }
     .card { flex: 1 1 200px; min-width: 100px; max-width: 250px; background-color: #fff; border-radius: 1px; border-style: groove; padding: 5px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
     .card-title { font-size: 0.9rem; color: #555; margin-bottom: 5px; text-align: center; }
     .card-value { font-size: 1.4rem; font-weight: 600; text-align: center; color: #222; }
+
     /* Chart Container */
     #chart-container { max-width: 900px; margin: 0 auto 30px; background-color: #fff; border-radius: 1px; border-style: groove; padding: 15px; }
+
     /* Tables Container */
     #tables-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 40px; margin-top: 20px; max-width: 1700px; margin: 0 auto; }
     .table-block { background-color: #fff; border-radius: 6px; padding: 15px; }
     .table-title { text-align: center; margin-bottom: 6px; font-weight: 600; font-size: 1.2rem; color: #444; }
     table { border-collapse: collapse; width: 100%; font-size: 14px; }
     table th, table td { border: 1px solid #000; padding: 8px 12px; text-align: left; }
-    table tbody tr:hover, .selected-row { background-color: #e7f1fa !important; cursor: pointer; }
+    /* Keep a subtle hover for readability, but no pointer cursor */
+    table tbody tr:hover { background-color: #e7f1fa !important; cursor: default; }
     .bottomline { margin-bottom: 20px; font-size: 14px; }
   </style>
 </head>
@@ -78,13 +83,10 @@
     // Globals
     let originalData = [];
     let myChart = null;
-    let currentFilterDimension = null;
-    let currentFilterValue = null;
 
     // Adjust these values each fiscal year (e.g., for FY26, change to '2025-07' and cutoff '2026-06')
     const FISCAL_START = '2024-07';
     const FISCAL_CUTOFF = '2025-06';
-    
 
     const CSV_BLOB_URL =
       "https://fbnycpublic.blob.core.windows.net/mapdata/customsearch64472.csv?sv=2022-11-02&ss=bfqt&srt=sco&sp=rptfx&se=2050-01-18T03%3A56%3A20Z&st=2025-01-17T19%3A56%3A20Z&spr=https&sig=u41iVNckMwY%2Fkx76wPlA6CfSUzP9Ls4PUijuBfSsWAY%3D";
@@ -130,7 +132,6 @@
       endSel.onchange = applyFiltersAndBuild;
     }
 
-
     function applyFiltersAndBuild() {
       const start = document.getElementById('start-month-filter').value;
       const end = document.getElementById('end-month-filter').value;
@@ -168,7 +169,8 @@
         { title: "Zip Codes Reached", value: distinctZips.size },
         { title: "Pounds of Culturally Relevant Food", value: totalCultural }
       ]);
-      addAllTableClickHandlers();
+
+      // NOTE: No click handlers are added — table clicks do nothing (no cross-filtering).
     }
 
     function aggregateData(data) {
@@ -184,31 +186,34 @@
       let totalNetWeight = 0, totalFreshProduce = 0, totalCultural = 0;
 
       data.forEach(r => {
-        const m = r.Month, w = parseFloat(r['Sum of Net Weight'])||0,
-          cat = r['Product Type'], diet = (r['DIETARY OPTIONS']||'').toLowerCase(),
+        const m = r.Month, w = parseFloat(r['Sum of Net Weight']) || 0,
+          cat = r['Product Type'], diet = (r['DIETARY OPTIONS'] || '').toLowerCase(),
           zip = r['Shipping Zip'], id = r.ID, type = r['Agency Type'],
           county = r.County, cls = r.Class;
+
         if (id) distinctAgencies.add(id);
         if (zip) distinctZips.add(zip);
+
         totalNetWeight += w;
-        if (cat==='Fresh Produce') totalFreshProduce += w;
-        if (diet.includes('halal')||diet.includes('kosher')) totalCultural += w;
+        if (cat === 'Fresh Produce') totalFreshProduce += w;
+        if (diet.includes('halal') || diet.includes('kosher')) totalCultural += w;
+
         if (m) {
           const key = m;
-          monthlyTotals[key] = (monthlyTotals[key]||0) + w;
-          (monthlySets[key]||(monthlySets[key]=new Set())).add(id);
+          monthlyTotals[key] = (monthlyTotals[key] || 0) + w;
+          (monthlySets[key] || (monthlySets[key] = new Set())).add(id);
         }
         if (cat) {
-          categoryTotals[cat] = (categoryTotals[cat]||0) + w;
-          (categorySets[cat]||(categorySets[cat]=new Set())).add(id);
+          categoryTotals[cat] = (categoryTotals[cat] || 0) + w;
+          (categorySets[cat] || (categorySets[cat] = new Set())).add(id);
         }
         if (type) {
-          agencyTotals[type] = (agencyTotals[type]||0) + w;
-          (agencyTypeSets[type]||(agencyTypeSets[type]=new Set())).add(id);
+          agencyTotals[type] = (agencyTotals[type] || 0) + w;
+          (agencyTypeSets[type] || (agencyTypeSets[type] = new Set())).add(id);
         }
         if (county) {
-          countyTotals[county] = (countyTotals[county]||0) + w;
-          (countySets[county]||(countySets[county]=new Set())).add(id);
+          countyTotals[county] = (countyTotals[county] || 0) + w;
+          (countySets[county] || (countySets[county] = new Set())).add(id);
         }
         if (diet.includes('kosher')) {
           kosherHalalTotals.Kosher += w;
@@ -218,50 +223,119 @@
           kosherHalalTotals.Halal += w;
           kosherHalalSets.Halal.add(id);
         }
-        if (cls==='Donated' && cat) {
-          donatedTotals[cat] = (donatedTotals[cat]||0) + w;
-          (donatedSets[cat]||(donatedSets[cat]=new Set())).add(id);
+        if (cls === 'Donated' && cat) {
+          donatedTotals[cat] = (donatedTotals[cat] || 0) + w;
+          (donatedSets[cat] || (donatedSets[cat] = new Set())).add(id);
         }
       });
-      return { monthlyTotals, monthlySets, categoryTotals, categorySets,
-               agencyTotals, agencyTypeSets, countyTotals, countySets,
-               kosherHalalTotals, kosherHalalSets, donatedTotals, donatedSets,
-               distinctAgencies, distinctZips, totalNetWeight,
-               totalFreshProduce, totalCultural };
+
+      return {
+        monthlyTotals, monthlySets,
+        categoryTotals, categorySets,
+        agencyTotals, agencyTypeSets,
+        countyTotals, countySets,
+        kosherHalalTotals, kosherHalalSets,
+        donatedTotals, donatedSets,
+        distinctAgencies, distinctZips,
+        totalNetWeight, totalFreshProduce, totalCultural
+      };
     }
 
     function renderChart(labels, values) {
       const ctx = document.getElementById('myChart').getContext('2d');
       if (myChart) myChart.destroy();
       myChart = new Chart(ctx, {
-        type: 'bar', data: { labels, datasets: [{ label:'Monthly Pounds', data:values, backgroundColor:'rgba(219,139,0,1)', borderColor:'#333', borderWidth:2 }] },
-        options: { responsive:true, scales:{ y:{ beginAtZero:true, title:{ display:true, text:'Pounds', font:{ size:20 } }}, x:{ title:{ display:true, text:'Month', font:{ size:20 } }}}, plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label(c){ return 'Monthly Pounds: '+Math.round(c.parsed.y).toLocaleString(); } } } } }
+        type: 'bar',
+        data: { labels, datasets: [{ label:'Monthly Pounds', data:values, backgroundColor:'rgba(219,139,0,1)', borderColor:'#333', borderWidth:2 }] },
+        options: {
+          responsive:true,
+          scales:{
+            y:{ beginAtZero:true, title:{ display:true, text:'Pounds', font:{ size:20 } }},
+            x:{ title:{ display:true, text:'Month', font:{ size:20 } }}
+          },
+          plugins:{
+            legend:{ display:false },
+            tooltip:{ callbacks:{ label(c){ return 'Monthly Pounds: '+Math.round(c.parsed.y).toLocaleString(); } } }
+          }
+        }
       });
     }
 
-    function renderCards(data){ const c=document.getElementById('cards-container'); c.innerHTML=data.map(d=>`<div class="card"><div class="card-title">${d.title}</div><div class="card-value">${Math.round(d.value).toLocaleString()}</div></div>`).join(''); }
+    function renderCards(data){
+      const c = document.getElementById('cards-container');
+      c.innerHTML = data.map(d =>
+        `<div class="card"><div class="card-title">${d.title}</div><div class="card-value">${Math.round(d.value).toLocaleString()}</div></div>`
+      ).join('');
+    }
 
-    function renderMonthlyTable(labels, vals, sets){ const tbl=document.getElementById('monthly-table'); let html='<thead><tr><th>Month</th><th>Pounds</th><th>Agencies Served</th></tr></thead><tbody>'; labels.forEach((m,i)=> html+=`<tr data-month="${m}"><td>${m}</td><td>${Math.round(vals[i]).toLocaleString()}</td><td>${sets[m]?.size||0}</td></tr>`); const ytd=vals.reduce((a,b)=>a+b,0); const agencies=new Set(); labels.forEach(m=>sets[m]?.forEach(id=>agencies.add(id))); html+=`<tr style="font-weight:bold;"><td>YTD Total</td><td>${Math.round(ytd).toLocaleString()}</td><td>${agencies.size}</td></tr></tbody>`; tbl.innerHTML=html; }
+    function renderMonthlyTable(labels, vals, sets){
+      const tbl = document.getElementById('monthly-table');
+      let html = '<thead><tr><th>Month</th><th>Pounds</th><th>Agencies Served</th></tr></thead><tbody>';
+      labels.forEach((m,i) => {
+        html += `<tr><td>${m}</td><td>${Math.round(vals[i]).toLocaleString()}</td><td>${sets[m]?.size||0}</td></tr>`;
+      });
+      const ytd = vals.reduce((a,b)=>a+b,0);
+      const agencies = new Set();
+      labels.forEach(m=>sets[m]?.forEach(id=>agencies.add(id)));
+      html += `<tr style="font-weight:bold;"><td>YTD Total</td><td>${Math.round(ytd).toLocaleString()}</td><td>${agencies.size}</td></tr></tbody>`;
+      tbl.innerHTML = html;
+    }
 
-    function renderAgencyTable(totals, sets){ const tbl=document.getElementById('agency-table'); const ents=Object.entries(totals).sort((a,b)=>b[1]-a[1]); const tot=ents.reduce((a,[,v])=>a+v,0); let html='<thead><tr><th>Agency Type</th><th>Pounds</th><th>% of Total</th><th>Agencies Served</th></tr></thead><tbody>'; ents.forEach(([k,v])=>html+=`<tr data-agencytype="${k}"><td>${k}</td><td>${Math.round(v).toLocaleString()}</td><td>${tot?((v/tot*100).toFixed(1))+'%':'0%'}</td><td>${sets[k]?.size||0}</td></tr>`); tbl.innerHTML=html+'</tbody>'; }
+    function renderAgencyTable(totals, sets){
+      const tbl = document.getElementById('agency-table');
+      const ents = Object.entries(totals).sort((a,b)=>b[1]-a[1]);
+      const tot = ents.reduce((a,[,v])=>a+v,0);
+      let html = '<thead><tr><th>Agency Type</th><th>Pounds</th><th>% of Total</th><th>Agencies Served</th></tr></thead><tbody>';
+      ents.forEach(([k,v])=>{
+        html += `<tr><td>${k}</td><td>${Math.round(v).toLocaleString()}</td><td>${tot?((v/tot*100).toFixed(1))+'%':'0%'}</td><td>${sets[k]?.size||0}</td></tr>`;
+      });
+      tbl.innerHTML = html + '</tbody>';
+    }
 
-    function renderCountyTable(totals, sets){ const tbl=document.getElementById('county-table'); const ents=Object.entries(totals).sort((a,b)=>b[1]-a[1]); const tot=ents.reduce((a,[,v])=>a+v,0); let html='<thead><tr><th>County</th><th>Pounds</th><th>% of Total</th><th>Agencies Served</th></tr></thead><tbody>'; ents.forEach(([k,v])=>html+=`<tr data-county="${k}"><td>${k}</td><td>${Math.round(v).toLocaleString()}</td><td>${tot?((v/tot*100).toFixed(1))+'%':'0%'}</td><td>${sets[k]?.size||0}</td></tr>`); tbl.innerHTML=html+'</tbody>'; }
+    function renderCountyTable(totals, sets){
+      const tbl = document.getElementById('county-table');
+      const ents = Object.entries(totals).sort((a,b)=>b[1]-a[1]);
+      const tot = ents.reduce((a,[,v])=>a+v,0);
+      let html = '<thead><tr><th>County</th><th>Pounds</th><th>% of Total</th><th>Agencies Served</th></tr></thead><tbody>';
+      ents.forEach(([k,v])=>{
+        html += `<tr><td>${k}</td><td>${Math.round(v).toLocaleString()}</td><td>${tot?((v/tot*100).toFixed(1))+'%':'0%'}</td><td>${sets[k]?.size||0}</td></tr>`;
+      });
+      tbl.innerHTML = html + '</tbody>';
+    }
 
-    function renderKosherHalalTable(totals, sets){ const tbl=document.getElementById('kosher-halal-table'); const ents=Object.entries(totals).sort((a,b)=>b[1]-a[1]); let html='<thead><tr><th>Kosher / Halal</th><th>Pounds</th><th>Agencies Served</th></tr></thead><tbody>'; ents.forEach(([k,v])=>html+=`<tr data-kosherhalal="${k}"><td>${k}</td><td>${Math.round(v).toLocaleString()}</td><td>${sets[k]?.size||0}</td></tr>`); tbl.innerHTML=html+'</tbody>'; }
+    function renderKosherHalalTable(totals, sets){
+      const tbl = document.getElementById('kosher-halal-table');
+      const ents = Object.entries(totals).sort((a,b)=>b[1]-a[1]);
+      let html = '<thead><tr><th>Kosher / Halal</th><th>Pounds</th><th>Agencies Served</th></tr></thead><tbody>';
+      ents.forEach(([k,v])=>{
+        html += `<tr><td>${k}</td><td>${Math.round(v).toLocaleString()}</td><td>${sets[k]?.size||0}</td></tr>`;
+      });
+      tbl.innerHTML = html + '</tbody>';
+    }
 
-    function renderCategoryTable(totals, sets){ const tbl=document.getElementById('category-table'); const ents=Object.entries(totals).sort((a,b)=>b[1]-a[1]); const tot=ents.reduce((a,[,v])=>a+v,0); let html='<thead><tr><th>Product Type</th><th>Pounds</th><th>% of Total</th><th>Agencies Served</th></tr></thead><tbody>'; ents.forEach(([k,v])=>html+=`<tr data-category="${k}"><td>${k}</td><td>${Math.round(v).toLocaleString()}</td><td>${tot?((v/tot*100).toFixed(1))+'%':'0%'}</td><td>${sets[k]?.size||0}</td></tr>`); tbl.innerHTML=html+'</tbody>'; }
+    function renderCategoryTable(totals, sets){
+      const tbl = document.getElementById('category-table');
+      const ents = Object.entries(totals).sort((a,b)=>b[1]-a[1]);
+      const tot = ents.reduce((a,[,v])=>a+v,0);
+      let html = '<thead><tr><th>Product Type</th><th>Pounds</th><th>% of Total</th><th>Agencies Served</th></tr></thead><tbody>';
+      ents.forEach(([k,v])=>{
+        html += `<tr><td>${k}</td><td>${Math.round(v).toLocaleString()}</td><td>${tot?((v/tot*100).toFixed(1))+'%':'0%'}</td><td>${sets[k]?.size||0}</td></tr>`;
+      });
+      tbl.innerHTML = html + '</tbody>';
+    }
 
-    function renderDonatedTable(totals, sets){ const tbl=document.getElementById('donated-table'); const ents=Object.entries(totals).sort((a,b)=>b[1]-a[1]); const tot=ents.reduce((a,[,v])=>a+v,0); let html='<thead><tr><th>Product Type (Donated Only)</th><th>Pounds</th><th>% of Donated</th><th>Agencies Served</th></tr></thead><tbody>'; ents.forEach(([k,v])=>html+=`<tr data-donatedcat="${k}"><td>${k}</td><td>${Math.round(v).toLocaleString()}</td><td>${tot?((v/tot*100).toFixed(1))+'%':'0%'}</td><td>${
-
- sets[k]?.size||0}</td></tr>`); tbl.innerHTML=html+'</tbody>'; }
-
-    function addAllTableClickHandlers(){ ['monthly','agency','county','kosher-halal','category','donated'].forEach(dim=>{ const idMap={ 'monthly':'monthly-table','agency':'agency-table','county':'county-table','kosher-halal':'kosher-halal-table','category':'category-table','donated':'donated-table'}; const dataAttrMap={ 'monthly':'data-month','agency':'data-agencytype','county':'data-county','kosher-halal':'data-kosherhalal','category':'data-category','donated':'data-donatedcat'}; const dimNameMap={ 'monthly':'Month','agency':'Agency Type','county':'County','kosher-halal':'kosher-halal','category':'Product Type','donated':'Donated Mix'}; addTableClickHandlers(idMap[dim],dataAttrMap[dim],dimNameMap[dim], dim==='kosher-halal'); }); }
-
-    function addTableClickHandlers(tableId,dataAttr,dimName,special=false){ const tbl=document.getElementById(tableId); if(!tbl)return; tbl.querySelectorAll('tbody tr').forEach(row=>row.onclick=()=>{ const val=row.getAttribute(dataAttr); if(currentFilterDimension===dimName&&currentFilterValue===val){ currentFilterDimension=currentFilterValue=null; removeAllRowHighlights(); buildDashboard(originalData);} else { removeAllRowHighlights(); row.classList.add('selected-row'); currentFilterDimension=dimName; currentFilterValue=val; let fd=[]; if(dimName==='kosher-halal'&&special){ fd=originalData.filter(r=>(r['DIETARY OPTIONS']||'').toLowerCase().includes(val.toLowerCase())); } else if(dimName==='Donated Mix'){ fd=originalData.filter(r=>r.Class==='Donated'&&r['Product Type']===val); } else { fd=originalData.filter(r=>r[dimName]===val);} buildDashboard(fd);} }); }
-
-    function removeAllRowHighlights(){ ['monthly-table','agency-table','county-table','kosher-halal-table','category-table','donated-table'].forEach(id=>{ document.getElementById(id)?.querySelectorAll('tbody tr').forEach(r=>r.classList.remove('selected-row')); }); }
-
+    function renderDonatedTable(totals, sets){
+      const tbl = document.getElementById('donated-table');
+      const ents = Object.entries(totals).sort((a,b)=>b[1]-a[1]);
+      const tot = ents.reduce((a,[,v])=>a+v,0);
+      let html = '<thead><tr><th>Product Type (Donated Only)</th><th>Pounds</th><th>% of Donated</th><th>Agencies Served</th></tr></thead><tbody>';
+      ents.forEach(([k,v])=>{
+        html += `<tr><td>${k}</td><td>${Math.round(v).toLocaleString()}</td><td>${tot?((v/tot*100).toFixed(1))+'%':'0%'}</td><td>${sets[k]?.size||0}</td></tr>`;
+      });
+      tbl.innerHTML = html + '</tbody>';
+    }
   </script>
-<h2> For Internal Use Only. Food Bank for New York City Analytics.</h2>
+
+  <h2> For Internal Use Only. Food Bank for New York City Analytics.</h2>
 </body>
 </html>
