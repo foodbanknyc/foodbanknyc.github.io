@@ -106,6 +106,8 @@ body, p, label, button {
       border: 1px solid #333;
 		border-radius: 50%;
     }
+    .mobile-pantry { background-color: #ff5301; 
+    }
 	  .multi-service {
 		  background-color: #FFA500;
 	  }
@@ -113,7 +115,7 @@ body, p, label, button {
 		  background-color: #8A2BE2;
 	  }
 	  .breakfast {
-		  background-color: #c04343;
+		  background-color: #963333;
 	  }
 	  .lunch {
 		  background-color: #3CB371;
@@ -395,6 +397,9 @@ body, p, label, button {
       <div class="color-box pantry-bag"></div> Pantry Groceries
     </div>
     <div class="legend-item">
+    <div class="color-box mobile-pantry"></div> Mobile Pantry
+    </div>
+    <div class="legend-item">
       <div class="color-box breakfast"></div> Breakfast
     </div>
     <div class="legend-item">
@@ -497,6 +502,7 @@ body, p, label, button {
       			<div class="filter-section">
 		  			<div class="filter-heading">What are you looking for?</div>
 					<label><div class="color-box pantry-bag"></div><input type="checkbox" class="meal-filter" value="Pantry Bag Distribution" /> Pantry Groceries</label>
+          <label><div class="color-box mobile-pantry"></div><input type="checkbox" class="meal-filter" value="Mobile Pantry" /> Mobile Pantry</label>
 					<label><div class="color-box breakfast"></div><input type="checkbox" class="meal-filter" value="Breakfast" /> Breakfast</label>
 					<label><div class="color-box lunch"></div><input type="checkbox" class="meal-filter" value="Lunch" /> Lunch</label>
 					<label><div class="color-box dinner"></div><input type="checkbox" class="meal-filter" value="Dinner" /> Dinner</label>
@@ -539,8 +545,13 @@ body, p, label, button {
       container: "map",
       style: "mapbox://styles/mapbox/streets-v11",
       center: [-74.0060, 40.7128],
-      zoom: 12
+      zoom: 12,
+      pitchWithRotate: false   // prevents pitch when rotating
     });
+
+    // kill rotate interactions (mouse + touch)
+    map.dragRotate.disable();
+    map.touchZoomRotate.disableRotation();
 
 
     navigator.geolocation.watchPosition(
@@ -628,6 +639,10 @@ body, p, label, button {
     }
 
     function getColorForGroup(agencies) {
+        const isMobilePantry = agencies.some(a =>
+    ((a["Program Type"] || "").trim().toLowerCase() === "fb mobile pantry")
+    );
+    if (isMobilePantry) return "#ff5301";
       const mealTypes = new Set();
       agencies.forEach(a => mealTypes.add((a["Meal Type"]||"").toLowerCase()));
       if (mealTypes.size > 1) return "#FFA500";
@@ -636,7 +651,7 @@ body, p, label, button {
     function getMealColor(mealType) {
       const t = (mealType||"").toLowerCase();
       if (t.includes("pantry bag")) return "#8A2BE2";
-      if (t.includes("breakfast")) return "#c04343";
+      if (t.includes("breakfast")) return "#963333";
       if (t.includes("lunch")) return "#3CB371";
       if (t.includes("dinner")) return "#4682B4";
       return "#FFA500";
@@ -763,47 +778,51 @@ body, p, label, button {
     });
 
     // Apply filters + re-draw
-    function applyFilters() {
-      const zipVal       = zipInput.value.trim();
-      const agencyVal    = agencyInput.value.trim().toLowerCase();
-      const selectedDays = Array.from(document.querySelectorAll(".day-filter:checked")).map(cb => cb.value);
-      const selectedMeals= Array.from(document.querySelectorAll(".meal-filter:checked")).map(cb => cb.value);
-      const isOpenNow    = openNowCb.checked;
+function applyFilters() {
+  const zipVal       = zipInput.value.trim();
+  const agencyVal    = agencyInput.value.trim().toLowerCase();
+  const selectedDays = Array.from(document.querySelectorAll(".day-filter:checked")).map(cb => cb.value);
+  const selectedMeals= Array.from(document.querySelectorAll(".meal-filter:checked")).map(cb => cb.value);
+  const isOpenNow    = openNowCb.checked;
 
-      const todayDayName = new Date().toLocaleString("en-US", { weekday: "long" });
-      const nowMinutes   = getNowInMinutes();
+  const todayDayName = new Date().toLocaleString("en-US", { weekday: "long" });
+  const nowMinutes   = getNowInMinutes();
 
-      filteredData = allData.filter(row => {
-        const day    = (row["Day of the Week"]||"").trim();
-        const meal   = (row["Meal Type"]||"Pantry Bag Distribution").trim();
-        const zipFld = (row["Address 4"]||"").trim();
-        const agencyFld = (row["Agency"]||"").toLowerCase();
+  filteredData = allData.filter(row => {
+    const day    = (row["Day of the Week"]||"").trim();
+    const meal   = (row["Meal Type"]||"Pantry Bag Distribution").trim();
+    const programType = (row["Program Type"] || "").trim().toLowerCase();
+    const zipFld = (row["Address 4"]||"").trim();
+    const agencyFld = (row["Agency"]||"").toLowerCase();
 
-        const zipCheck    = !zipVal || zipFld.includes(zipVal);
-        const dayCheck    = !selectedDays.length || selectedDays.includes(day);
-        const mealCheck   = !selectedMeals.length || selectedMeals.includes(meal);
-        const agencyCheck = !agencyVal || agencyFld.includes(agencyVal);
+    // Derive the category used by the UI meal checkboxes
+    const displayMeal = (programType === "fb mobile pantry") ? "Mobile Pantry" : meal;
 
-        let openNowCheck = true;
-        if (isOpenNow) {
-          openNowCheck = false;
-          if (row["Frequency"]==="Weekly" && day===todayDayName) {
-            const openTime  = parseTime12Hr(row["Opening Hour"]);
-            const closeTime = parseTime12Hr(row["Closing Hour"]);
-            if (openTime!==null && closeTime!==null &&
-                nowMinutes>=openTime && nowMinutes<closeTime) {
-              openNowCheck = true;
-            }
-          }
+    const zipCheck    = !zipVal || zipFld.includes(zipVal);
+    const dayCheck    = !selectedDays.length || selectedDays.includes(day);
+    const mealCheck   = !selectedMeals.length || selectedMeals.includes(displayMeal);
+    const agencyCheck = !agencyVal || agencyFld.includes(agencyVal);
+
+    let openNowCheck = true;
+    if (isOpenNow) {
+      openNowCheck = false;
+      if (row["Frequency"]==="Weekly" && day===todayDayName) {
+        const openTime  = parseTime12Hr(row["Opening Hour"]);
+        const closeTime = parseTime12Hr(row["Closing Hour"]);
+        if (openTime!==null && closeTime!==null && nowMinutes>=openTime && nowMinutes<closeTime) {
+          openNowCheck = true;
         }
-
-        return zipCheck && dayCheck && mealCheck && agencyCheck && openNowCheck;
-      });
-
-      addMarkers(filteredData);
-      revertHighlight();
-      closeDetailsPane();
+      }
     }
+
+    return zipCheck && dayCheck && mealCheck && agencyCheck && openNowCheck;
+  });
+
+  addMarkers(filteredData);
+  revertHighlight();
+  closeDetailsPane();
+}
+
 
     function getNowInMinutes() {
       const now = new Date();
