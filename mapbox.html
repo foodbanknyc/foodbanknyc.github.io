@@ -501,7 +501,7 @@ body, p, label, button {
 			<div class="column one-half">
       			<div class="filter-section">
 		  			<div class="filter-heading">What are you looking for?</div>
-					<label><div class="color-box pantry-bag"></div><input type="checkbox" class="meal-filter" value="Pantry Bag Distribution" /> Pantry Groceries</label>
+					<label><div class="color-box pantry-bag"></div><input type="checkbox" class="meal-filter" value="Pantry Distribution" /> Pantry Groceries</label>
           <label><div class="color-box mobile-pantry"></div><input type="checkbox" class="meal-filter" value="Mobile Pantry" /> Mobile Pantry</label>
 					<label><div class="color-box breakfast"></div><input type="checkbox" class="meal-filter" value="Breakfast" /> Breakfast</label>
 					<label><div class="color-box lunch"></div><input type="checkbox" class="meal-filter" value="Lunch" /> Lunch</label>
@@ -650,7 +650,7 @@ body, p, label, button {
     }
     function getMealColor(mealType) {
       const t = (mealType||"").toLowerCase();
-      if (t.includes("pantry bag")) return "#8A2BE2";
+      if (t.includes("pantry")) return "#8A2BE2";
       if (t.includes("breakfast")) return "#963333";
       if (t.includes("lunch")) return "#3CB371";
       if (t.includes("dinner")) return "#4682B4";
@@ -790,7 +790,7 @@ function applyFilters() {
 
   filteredData = allData.filter(row => {
     const day    = (row["Day of the Week"]||"").trim();
-    const meal   = (row["Meal Type"]||"Pantry Bag Distribution").trim();
+    const meal   = (row["Meal Type"]||"Pantry Distribution").trim();
     const programType = (row["Program Type"] || "").trim().toLowerCase();
     const zipFld = (row["Address 4"]||"").trim();
     const agencyFld = (row["Agency"]||"").toLowerCase();
