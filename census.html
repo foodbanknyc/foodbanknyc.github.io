@@ -1,0 +1,784 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>FBNYC Census Explorer</title>
+  <style>
+    :root{
+      --bg:#ffffff; --panel:#fafafa; --border:#e6e6e6; --text:#111; --muted:#5a5a5a;
+      --accent:#111; --accentText:#fff; --danger:#b00020; --warn:#8a5a00; --ok:#0a7a2f;
+      --radius:16px;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    body{ margin:0; background:var(--bg); color:var(--text); overflow-x:auto; }
+    .wrap{
+    max-width:1200px;
+    margin:0 auto;
+    padding:18px 18px 40px;
+    overflow:visible; /* allow children to overflow */
+    }
+
+
+    header{ display:flex; flex-direction:column; gap:8px; margin-bottom:14px; }
+    h1{ margin:0; font-size:20px; letter-spacing:-0.2px; }
+    .sub{ color:var(--muted); font-size:13px; line-height:1.4; }
+
+    .grid{ display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end; }
+    .control{ display:flex; flex-direction:column; gap:6px; min-width:210px; flex:1 1 240px; }
+    .control label{ font-size:12px; color:var(--muted); }
+    select, input[type="text"]{
+      border:1px solid #bbb; border-radius:12px;
+      padding:10px 12px; background:#fff; font-size:14px;
+      outline:none;
+    }
+    select:focus, input[type="text"]:focus{ border-color:#777; }
+
+    .row{ display:flex; flex-wrap:wrap; gap:14px; align-items:center; margin-top:12px; }
+
+    .panel{
+      background:var(--panel); border:1px solid var(--border);
+      border-radius:var(--radius); padding:14px;
+    }
+
+    .toggles{ display:flex; flex-wrap:wrap; gap:14px; align-items:center; }
+    .toggle{ display:flex; gap:10px; align-items:center; }
+    .toggle input{ transform:scale(1.05); }
+    .toggle span{ font-size:13px; color:var(--muted); }
+
+    .actions{ display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; }
+    button{
+      padding:10px 14px; border-radius:12px; border:1px solid #bbb;
+      background:#f7f7f7; cursor:pointer; font-size:14px;
+    }
+    button.primary{ background:var(--accent); color:var(--accentText); border-color:var(--accent); }
+    button:disabled{ opacity:0.6; cursor:not-allowed; }
+
+    .meta{ display:flex; flex-direction:column; gap:10px; margin-top:12px; }
+    .kv{ display:flex; flex-direction:column; gap:6px; }
+    .k{ color:var(--muted); font-size:12px; }
+    .v{ font-size:13px; }
+    .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:12px; word-break:break-all; }
+
+    .status{ font-size:13px; color:var(--muted); white-space:pre-wrap; }
+    .status.ok{ color:var(--ok); }
+    .status.warn{ color:var(--warn); }
+    .status.err{ color:var(--danger); }
+
+    .twoCol{ display:flex; flex-wrap:wrap; gap:12px; margin-top:12px; align-items:flex-start; }
+    .left{ flex:1 1 420px; min-width:320px; }
+    .right{
+      flex:1 1 420px;
+      min-width:320px;
+      overflow:visible; /* ✅ allow table to expand beyond panel */
+    }
+
+    .fieldHeader{
+      display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between;
+      margin-bottom:10px;
+    }
+    .fieldHeader .title{ font-weight:600; font-size:13px; }
+    .fieldHeader .hint{ color:var(--muted); font-size:12px; }
+
+    .fieldTools{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:8px 0 12px; }
+    .chips{ display:flex; flex-wrap:wrap; gap:8px; }
+    .chip{
+      border:1px solid var(--border); background:#fff; border-radius:999px;
+      padding:6px 10px; font-size:12px; color:#333; cursor:pointer;
+    }
+    .chip:hover{ border-color:#cfcfcf; }
+
+    .fieldList{
+      max-height:360px; overflow:auto; background:#fff; border:1px solid var(--border);
+      border-radius:14px; padding:8px;
+    }
+    .fieldItem{ display:flex; gap:10px; align-items:flex-start; padding:8px; border-radius:10px; }
+    .fieldItem:hover{ background:#f6f6f6; }
+    .fieldItem input{ margin-top:2px; }
+    .fieldText{ display:flex; flex-direction:column; gap:2px; }
+    .fieldLabel{ font-size:13px; }
+    .fieldCode{ font-size:12px; color:var(--muted); }
+
+    /* ✅ Narrower table columns + tighter layout */
+    #tableWrap{
+  margin-top:12px;
+  width: max-content;   /* table can extend horizontally */
+  overflow: visible;    /* use browser scrollbar only */
+  border:1px solid #7e7c7c;
+     border-radius:14px;
+}
+
+    table{
+      width:max-content;     /* ✅ can extend beyond panel */
+      border-collapse:collapse;
+      margin-top:10px;
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius:14px;
+      overflow:hidden;
+    }
+    th, td{
+      border-bottom:1px solid #eee;
+      padding:6px 8px;       /* ✅ tighter */
+      text-align:left;
+      vertical-align:top;
+      max-width:220px;       /* ✅ narrower */
+      white-space:normal;
+      word-break:break-word;
+      font-size:12.5px;
+    }
+    th{
+      background:#fafafa;
+      font-weight:600;
+      font-size:12px;
+    }
+    .muted{ color:var(--muted); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>FBNYC Census Explorer</h1>
+      <div class="sub">Choose census fields below and select fetch.</div>
+    </header>
+
+    <div class="panel">
+      <div class="grid">
+        <div class="control">
+          <label for="vintage">ACS Vintage</label>
+          <select id="vintage">
+            <option value="acs1">ACS 1-year</option>
+            <option value="acs5">ACS 5-year</option>
+          </select>
+        </div>
+
+        <div class="control">
+          <label for="year">Year</label>
+          <select id="year"></select>
+        </div>
+
+        <div class="control">
+          <label for="tableKey">Table (food-bank relevant)</label>
+          <select id="tableKey"></select>
+        </div>
+
+        <div class="control">
+          <label for="region">Geography</label>
+          <select id="region"></select>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="toggles">
+          <label class="toggle">
+            <input id="includeMoe" type="checkbox" />
+            <span>Include MOE fields (if available)</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="primary" id="fetchBtn">Fetch</button>
+        <button id="csvBtn">Download CSV</button>
+      </div>
+
+      <div class="meta">
+        <div class="kv"><div id="url" class="mono"></div></div>
+        <div class="kv">
+          <div class="k">Citation</div>
+          <div id="cite" class="v"></div>
+        </div>
+        <div id="status" class="status"></div>
+      </div>
+    </div>
+    <div id="tableWrap"></div>
+
+    <div class="twoCol">
+      <div class="panel left">
+        <div class="fieldHeader">
+          <div>
+            <div class="title">Fields</div>
+            <div class="hint">Search + check the fields you want returned.</div>
+          </div>
+          <div class="hint" id="fieldCount"></div>
+        </div>
+
+        <div class="fieldTools">
+          <input id="fieldSearch" type="text"
+                 placeholder="Search fields (e.g., unemployment rate, female, SNAP, children, disability)…"
+                 style="flex:1 1 260px; min-width:220px;" />
+          <button id="selectNoneBtn" type="button">Select none</button>
+        </div>
+
+        <div class="chips" id="presetChips"></div>
+        <div class="fieldList" id="fieldList"></div>
+      </div>
+      <div id="tableWrap"></div>
+
+
+    </div>
+  </div>
+
+<script>
+const MAX_YEAR_ACS1 = 2024;
+const MAX_YEAR_ACS5 = 2024;
+
+const TABLES = {
+  S2201: { label: "SNAP (S2201) – households receiving SNAP + breakouts", datasetPath: "subject" },
+  S1701: { label: "Poverty (S1701) – poverty status + sex/age breakouts", datasetPath: "subject" },
+  S2301: { label: "Employment/Unemployment (S2301) – unemployment rate + breakouts", datasetPath: "subject" },
+  S1903: { label: "Income (S1903) – household income distribution/medians", datasetPath: "subject" },
+  S1810: { label: "Disability (S1810) – disability status", datasetPath: "subject" },
+  S2701: { label: "Health Insurance (S2701) – insured/uninsured", datasetPath: "subject" },
+  S2503: { label: "Housing Costs (S2503) – financial characteristics", datasetPath: "subject" },
+  S2506: { label: "Gross Rent as % Income (S2506) – rent burden", datasetPath: "subject" },
+  S0802: { label: "Vehicle Availability (S0802) – access to vehicles", datasetPath: "subject" },
+  S1101: { label: "Households & Families (S1101) – household composition", datasetPath: "subject" },
+  S1601: { label: "Language (S1601) – English proficiency", datasetPath: "subject" },
+  S2801: { label: "Internet Access (S2801) – broadband/computer", datasetPath: "subject" }
+};
+
+const REGIONS = {
+  us: { label: "United States (Nationwide)", forParam: "us:1", inParam: "" },
+  nyc: { label: "New York City (Place)", forParam: "place:51000", inParam: "state:36" },
+  bronx: { label: "Bronx (County 005)", forParam: "county:005", inParam: "state:36" },
+  brooklyn: { label: "Brooklyn / Kings (047)", forParam: "county:047", inParam: "state:36" },
+  manhattan: { label: "Manhattan / New York (061)", forParam: "county:061", inParam: "state:36" },
+  queens: { label: "Queens (081)", forParam: "county:081", inParam: "state:36" },
+  staten_island: { label: "Staten Island / Richmond (085)", forParam: "county:085", inParam: "state:36" }
+};
+
+const GEO_ID_COLS = new Set(["state","place","county","us"]);
+const cache = { variables: new Map() };
+
+function buildBaseUrl(year, vintage, datasetPath){
+  const base = `https://api.census.gov/data/${encodeURIComponent(year)}/acs/${encodeURIComponent(vintage)}`;
+  return datasetPath ? `${base}/${encodeURIComponent(datasetPath)}` : base;
+}
+function buildVarsUrl(year, vintage, datasetPath){
+  return `${buildBaseUrl(year, vintage, datasetPath)}/variables.json`;
+}
+function setStatus(msg, cls=""){
+  const el = document.getElementById("status");
+  el.className = `status ${cls}`.trim();
+  el.textContent = msg || "";
+}
+function prettifyLabel(s){
+  if(!s) return s;
+  return s.replaceAll("!!"," – ").replaceAll(":","").trim();
+}
+
+/* ✅ Short labels everywhere */
+function shortHeader(full){
+  if(!full) return full;
+  let s = full.replaceAll("!!"," – ").replaceAll(":","").trim();
+
+  const drops = [
+    "Estimate – Total – ",
+    "Percent – Total – ",
+    "Percent – ",
+    "Estimate – ",
+    "Number – ",
+    "Total – "
+  ];
+  for(const d of drops){
+    if(s.startsWith(d)) { s = s.slice(d.length); break; }
+  }
+
+  s = s.replaceAll("With one or more people", "With ≥1 person");
+  s = s.replaceAll("years and over", "+");
+  s = s.replaceAll("under 18 years", "<18");
+  s = s.replaceAll("With own children under 18 years", "With own kids <18");
+  s = s.replaceAll("Female householder, no spouse present", "Female householder (no spouse)");
+  s = s.replaceAll("Male householder, no spouse present", "Male householder (no spouse)");
+
+  const parts = s.split(" – ").map(x=>x.trim()).filter(Boolean);
+  if(parts.length > 4) s = parts.slice(-3).join(" – ");
+
+  return s.trim();
+}
+
+/* ✅ number formatting */
+function parseNumber(x){
+  if(x === null || x === undefined) return null;
+  const s = String(x).trim();
+  if(s === "" || s === "." || s === "null") return null;
+  // Census sometimes returns strings that are numeric
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
+}
+function isPercentLike(label){
+  const t = (label || "").toLowerCase();
+  return t.includes("percent") || t.includes("rate");
+}
+function isDollarLike(label){
+  const t = (label || "").toLowerCase();
+  return t.includes("dollars") || t.includes("income") || t.includes("median");
+}
+function formatValue(raw, label){
+  const n = parseNumber(raw);
+  if(n === null) return raw;
+
+  if(isPercentLike(label)){
+    // keep 1 decimal if needed
+    const frac = (String(raw).includes(".")) ? 1 : 0;
+    return new Intl.NumberFormat(undefined, { maximumFractionDigits: frac, minimumFractionDigits: frac }).format(n) + "%";
+  }
+
+  if(isDollarLike(label)){
+    // some income tables are in dollars; keep whole dollars
+    const abs = Math.round(n);
+    return "$" + new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(abs);
+  }
+
+  // default: count / amount
+  return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(Math.round(n));
+}
+
+function populateYears(){
+  const vintage = document.getElementById("vintage").value;
+  const yearSel = document.getElementById("year");
+  const maxYear = (vintage === "acs5") ? MAX_YEAR_ACS5 : MAX_YEAR_ACS1;
+  const startYear = 2005;
+
+  const current = yearSel.value;
+  yearSel.innerHTML = "";
+  for(let y=maxYear; y>=startYear; y--){
+    const opt = document.createElement("option");
+    opt.value = String(y);
+    opt.textContent = String(y);
+    yearSel.appendChild(opt);
+  }
+  yearSel.value = (current && Number(current)<=maxYear) ? current : String(maxYear);
+}
+
+function populateTables(){
+  const sel = document.getElementById("tableKey");
+  sel.innerHTML = "";
+  Object.entries(TABLES).forEach(([k,v])=>{
+    const opt = document.createElement("option");
+    opt.value = k;
+    opt.textContent = v.label;
+    sel.appendChild(opt);
+  });
+  sel.value = "S2201";
+}
+
+function populateRegions(){
+  const sel = document.getElementById("region");
+  sel.innerHTML = "";
+  Object.entries(REGIONS).forEach(([k,v])=>{
+    const opt = document.createElement("option");
+    opt.value = k;
+    opt.textContent = v.label;
+    sel.appendChild(opt);
+  });
+  sel.value = "nyc";
+}
+
+function buildQueryUrl({year,vintage,tableId,regionKey,fields,includeMoe}){
+  const table = TABLES[tableId];
+  const region = REGIONS[regionKey];
+
+  const vars = ["NAME", ...fields];
+  if(includeMoe){
+    const moeCandidates = fields.filter(v => v.endsWith("E")).map(v => v.slice(0,-1) + "M");
+    vars.push(...moeCandidates);
+  }
+
+  const baseUrl = buildBaseUrl(year, vintage, table.datasetPath);
+  const get = vars.join(",");
+  const inPart = region.inParam ? `&in=${encodeURIComponent(region.inParam)}` : "";
+  const url = `${baseUrl}?get=${encodeURIComponent(get)}&for=${encodeURIComponent(region.forParam)}${inPart}`;
+  return { url };
+}
+
+function renderUrlAndCitation(url, year, vintage, tableId, regionKey){
+  document.getElementById("url").textContent = url;
+  const vintageLabel = (vintage==="acs1") ? "ACS 1-Year" : "ACS 5-Year";
+  document.getElementById("cite").textContent =
+    `U.S. Census Bureau, ${vintageLabel} Estimates (${year}), Table ${tableId} (via Census API), geography: ${REGIONS[regionKey].label}.`;
+}
+
+async function getVariablesMap(year, vintage, datasetPath){
+  const key = `${year}|${vintage}|${datasetPath}`;
+  if(cache.variables.has(key)) return cache.variables.get(key);
+
+  const res = await fetch(buildVarsUrl(year, vintage, datasetPath), { headers: { "Accept":"application/json" }});
+  if(!res.ok) throw new Error(`variables.json failed (HTTP ${res.status}). Try prior year if this vintage/year isn’t live yet.`);
+  const json = await res.json();
+  const map = json.variables || {};
+  cache.variables.set(key, map);
+  return map;
+}
+
+function getTableVars(variablesMap, tableId){
+  const prefix = `${tableId}_`;
+  const out = [];
+  for(const [code, meta] of Object.entries(variablesMap)){
+    if(!code.startsWith(prefix)) continue;
+    if(code.endsWith("EA") || code.endsWith("MA")) continue;
+    const full = prettifyLabel(meta?.label || code);
+    out.push({ code, full, short: shortHeader(full) });
+  }
+  out.sort((a,b)=>a.short.localeCompare(b.short));
+  return out;
+}
+
+/* presets unchanged */
+function buildPresets(tableId){
+  const presets = [];
+  if(tableId==="S2201"){
+    presets.push({
+      name:"SNAP – overall + by householder sex",
+      matchers:[
+        "Estimate – Total – Households",
+        "Percent – Total – Households",
+        "Percent – Total – Households – Other family – Male householder, no spouse present",
+        "Percent – Total – Households – Other family – Female householder, no spouse present"
+      ]
+    });
+  }
+  if(tableId==="S2301"){
+    presets.push({
+      name:"Unemployment – overall + sex",
+      matchers:[
+        "Unemployment rate – Population 16 years and over",
+        "Unemployment rate – Population 16 years and over – Sex – Male",
+        "Unemployment rate – Population 16 years and over – Sex – Female"
+      ]
+    });
+  }
+  if(tableId==="S1701"){
+    presets.push({
+      name:"Poverty – overall + sex",
+      matchers:[
+        "Percent below poverty level – Population for whom poverty status is determined",
+        "Percent below poverty level – Population for whom poverty status is determined – Sex – Male",
+        "Percent below poverty level – Population for whom poverty status is determined – Sex – Female",
+        "Estimate – Total – Population for whom poverty status is determined",
+        "Estimate – Total – Population below poverty level"
+      ]
+    });
+  }
+  presets.push({ name:"Common lenses (pick from list)", matchers:[] });
+  return presets;
+}
+function applyPreset(tableVars, preset){
+  const selected = [];
+  const norm = s => (s||"").toLowerCase();
+  for(const m of preset.matchers){
+    const hit = tableVars.find(v => norm(v.full).includes(norm(m)));
+    if(hit) selected.push(hit.code);
+  }
+  return [...new Set(selected)];
+}
+
+function getSelectedFieldSet(){
+  const raw = localStorage.getItem("acs_selected_fields");
+  try{
+    const arr = raw ? JSON.parse(raw) : [];
+    return new Set(Array.isArray(arr) ? arr : []);
+  }catch{
+    return new Set();
+  }
+}
+function persistSelectedFieldSet(set){
+  localStorage.setItem("acs_selected_fields", JSON.stringify([...set]));
+}
+function defaultSeedFieldsIfEmpty(tableId, tableVars){
+  const set = getSelectedFieldSet();
+  if(set.size>0) return;
+  let seed = [];
+  const presets = buildPresets(tableId);
+  const first = presets[0];
+  if(first?.matchers?.length) seed = applyPreset(tableVars, first);
+  if(seed.length===0) seed = tableVars.slice(0,6).map(v=>v.code);
+  persistSelectedFieldSet(new Set(seed));
+}
+
+function renderFields(tableVars){
+  const listEl = document.getElementById("fieldList");
+  const searchEl = document.getElementById("fieldSearch");
+  const fieldCountEl = document.getElementById("fieldCount");
+  const selectedSet = getSelectedFieldSet();
+
+  const q = (searchEl.value || "").trim().toLowerCase();
+  const filtered = tableVars.filter(v=>{
+    if(!q) return true;
+    return v.full.toLowerCase().includes(q) || v.code.toLowerCase().includes(q) || v.short.toLowerCase().includes(q);
+  });
+
+  fieldCountEl.textContent = `${filtered.length} shown`;
+  listEl.innerHTML = "";
+
+  for(const v of filtered){
+    const row = document.createElement("label");
+    row.className = "fieldItem";
+
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = selectedSet.has(v.code);
+    cb.addEventListener("change", ()=>{
+      if(cb.checked) selectedSet.add(v.code);
+      else selectedSet.delete(v.code);
+      persistSelectedFieldSet(selectedSet);
+      updateGeneratedUrlOnly();
+    });
+
+    const text = document.createElement("div");
+    text.className = "fieldText";
+
+    const lab = document.createElement("div");
+    lab.className = "fieldLabel";
+    lab.textContent = v.short;     /* ✅ shortened in fields list */
+    lab.title = v.full;            /* tooltip full label */
+
+    const code = document.createElement("div");
+    code.className = "fieldCode";
+    code.textContent = v.code;
+
+    text.appendChild(lab);
+    text.appendChild(code);
+
+    row.appendChild(cb);
+    row.appendChild(text);
+    listEl.appendChild(row);
+  }
+}
+
+function updateGeneratedUrlOnly(){
+  const year = document.getElementById("year").value;
+  const vintage = document.getElementById("vintage").value;
+  const tableId = document.getElementById("tableKey").value;
+  const regionKey = document.getElementById("region").value;
+  const includeMoe = document.getElementById("includeMoe").checked;
+
+  const fields = [...getSelectedFieldSet()];
+  const { url } = buildQueryUrl({year,vintage,tableId,regionKey,fields,includeMoe});
+  renderUrlAndCitation(url, year, vintage, tableId, regionKey);
+}
+
+function arrayToTable(jsonArray, variablesMap){
+  if(!Array.isArray(jsonArray) || jsonArray.length<2) return null;
+
+  const headers = jsonArray[0];
+  const rows = jsonArray.slice(1);
+
+  // Build header metadata: { idx, code, fullLabel, shortLabel }
+  const headerMeta = headers.map((h, idx)=>{
+    if(h==="NAME") return { idx, code:h, full:"Geography", short:"Geography" };
+    if(GEO_ID_COLS.has(h)) return { idx, code:h, full:h, short:h };
+    const full = variablesMap?.[h]?.label ? prettifyLabel(variablesMap[h].label) : h;
+    return { idx, code:h, full, short: shortHeader(full) };
+  });
+
+  // Always drop geo ID columns
+  const keep = headerMeta.filter(m => !GEO_ID_COLS.has(m.code));
+
+  const table = document.createElement("table");
+
+  const thead = document.createElement("thead");
+  const trh = document.createElement("tr");
+  for(const h of keep){
+    const th = document.createElement("th");
+    th.textContent = h.short;
+    th.title = h.full; // tooltip full
+    trh.appendChild(th);
+  }
+  thead.appendChild(trh);
+  table.appendChild(thead);
+
+  const tbody = document.createElement("tbody");
+  for(const r of rows){
+    const tr = document.createElement("tr");
+    for(const h of keep){
+      const td = document.createElement("td");
+      const raw = r[h.idx];
+
+      if(h.code === "NAME"){
+        td.textContent = raw;
+      } else {
+        td.textContent = formatValue(raw, h.full);
+      }
+      tr.appendChild(td);
+    }
+    tbody.appendChild(tr);
+  }
+  table.appendChild(tbody);
+  return table;
+}
+
+function downloadCsv(jsonArray, filename){
+  const esc = (v)=>{
+    const s = (v ?? "").toString();
+    if (/[",\n]/.test(s)) return `"${s.replaceAll('"','""')}"`;
+    return s;
+  };
+  const lines = jsonArray.map(row => row.map(esc).join(",")).join("\n");
+  const blob = new Blob([lines], { type:"text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
+}
+
+async function refreshFieldsUI(){
+  setStatus("Loading table fields…");
+  const year = document.getElementById("year").value;
+  const vintage = document.getElementById("vintage").value;
+  const tableId = document.getElementById("tableKey").value;
+  const datasetPath = TABLES[tableId].datasetPath;
+
+  const variablesMap = await getVariablesMap(year, vintage, datasetPath);
+  const tableVars = getTableVars(variablesMap, tableId);
+
+  defaultSeedFieldsIfEmpty(tableId, tableVars);
+
+  const chipsEl = document.getElementById("presetChips");
+  chipsEl.innerHTML = "";
+  const presets = buildPresets(tableId).filter(p=>p.matchers.length>0);
+  presets.forEach(p=>{
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "chip";
+    chip.textContent = p.name;
+    chip.addEventListener("click", ()=>{
+      const vars = applyPreset(tableVars, p);
+      if(vars.length){
+        persistSelectedFieldSet(new Set(vars));
+        renderFields(tableVars);
+        updateGeneratedUrlOnly();
+        setStatus(`Preset applied: ${p.name}`, "ok");
+        setTimeout(()=>setStatus(""), 1200);
+      }else{
+        setStatus(`Preset found no matches for this year/vintage. Use search + manual selection.`, "warn");
+      }
+    });
+    chipsEl.appendChild(chip);
+  });
+
+  renderFields(tableVars);
+  document.getElementById("fieldSearch").oninput = ()=>renderFields(tableVars);
+
+  setStatus("");
+  updateGeneratedUrlOnly();
+}
+
+async function fetchData(){
+  const fetchBtn = document.getElementById("fetchBtn");
+  fetchBtn.disabled = true;
+  setStatus("Fetching…");
+  document.getElementById("tableWrap").innerHTML = "";
+
+  const year = document.getElementById("year").value;
+  const vintage = document.getElementById("vintage").value;
+  const tableId = document.getElementById("tableKey").value;
+  const regionKey = document.getElementById("region").value;
+  const includeMoe = document.getElementById("includeMoe").checked;
+  const datasetPath = TABLES[tableId].datasetPath;
+
+  try{
+    const variablesMap = await getVariablesMap(year, vintage, datasetPath);
+
+    const fields = [...getSelectedFieldSet()];
+    if(fields.length===0) throw new Error("No fields selected.");
+
+    const { url } = buildQueryUrl({year,vintage,tableId,regionKey,fields,includeMoe});
+    renderUrlAndCitation(url, year, vintage, tableId, regionKey);
+
+    const res = await fetch(url, { headers: { "Accept":"application/json" }});
+    if(!res.ok){
+      const text = await res.text().catch(()=> "");
+      throw new Error(`HTTP ${res.status}. ${text || "Request failed."}`);
+    }
+    const data = await res.json();
+
+    const table = arrayToTable(data, variablesMap);
+    const wrap = document.getElementById("tableWrap");
+    wrap.innerHTML = "";
+    if(!table){
+      wrap.textContent = "No rows returned.";
+      setStatus("No rows returned.", "warn");
+    }else{
+      wrap.appendChild(table);
+      setStatus("Fetched successfully.", "ok");
+      window.__lastResult = { data, year, vintage, tableId, regionKey };
+    }
+  }catch(e){
+    setStatus(
+      "Fetch failed.\n\nCommon fixes:\n" +
+      "• If ACS 5-year for the newest year isn’t live yet, switch to the prior year.\n" +
+      "• Turn off MOE.\n" +
+      "• Remove a field that doesn’t exist for this vintage/year.\n\n" +
+      `Error: ${e?.message || e}`,
+      "err"
+    );
+  }finally{
+    fetchBtn.disabled = false;
+  }
+}
+
+function init(){
+  const yearSel = document.getElementById("year");
+
+  function populateYears(){
+    const vintage = document.getElementById("vintage").value;
+    const maxYear = (vintage === "acs5") ? MAX_YEAR_ACS5 : MAX_YEAR_ACS1;
+    const startYear = 2005;
+    const current = yearSel.value;
+
+    yearSel.innerHTML = "";
+    for(let y=maxYear; y>=startYear; y--){
+      const opt = document.createElement("option");
+      opt.value = String(y);
+      opt.textContent = String(y);
+      yearSel.appendChild(opt);
+    }
+    yearSel.value = (current && Number(current)<=maxYear) ? current : String(maxYear);
+  }
+
+  // populate controls
+  populateTables();
+  populateRegions();
+  populateYears();
+
+  document.getElementById("vintage").addEventListener("change", async ()=>{
+    populateYears();
+    await refreshFieldsUI();
+  });
+  document.getElementById("year").addEventListener("change", refreshFieldsUI);
+  document.getElementById("tableKey").addEventListener("change", async ()=>{
+    localStorage.removeItem("acs_selected_fields");
+    await refreshFieldsUI();
+  });
+  document.getElementById("region").addEventListener("change", updateGeneratedUrlOnly);
+  document.getElementById("includeMoe").addEventListener("change", updateGeneratedUrlOnly);
+
+  document.getElementById("selectNoneBtn").addEventListener("click", ()=>{
+    persistSelectedFieldSet(new Set());
+    refreshFieldsUI();
+  });
+
+  document.getElementById("fetchBtn").addEventListener("click", fetchData);
+
+  document.getElementById("csvBtn").addEventListener("click", ()=>{
+    const last = window.__lastResult;
+    if(!last?.data){
+      setStatus("No fetched data yet. Click Fetch first.", "warn");
+      return;
+    }
+    const { year, vintage, tableId, regionKey, data } = last;
+    downloadCsv(data, `acs_${tableId}_${regionKey}_${vintage}_${year}.csv`);
+  });
+
+  refreshFieldsUI();
+}
+
+init();
+</script>
+</body>
+</html>
