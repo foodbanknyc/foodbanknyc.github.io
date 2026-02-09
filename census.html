@@ -626,6 +626,12 @@ function downloadCsv(jsonArray, filename){
   URL.revokeObjectURL(a.href);
 }
 
+// Force no selections on load (ignores any stored selections)
+for (const k of Object.keys(localStorage)) {
+  if (k.startsWith("acs_selected_fields__")) localStorage.removeItem(k);
+}
+
+
 async function refreshFieldsUI(){
   setStatus("Loading table fields…");
   const year = document.getElementById("year").value;
