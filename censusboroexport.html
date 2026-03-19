@@ -1,0 +1,517 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>NYC Borough – ACS 5-year Export (with pops + numerators)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    html, body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; background:#fafafa; color:#111; }
+    .wrap { max-width: 980px; margin: 22px auto; padding: 0 16px; }
+    h1 { font-size: 18px; margin: 0 0 12px; }
+    .panel { background:#fff; border:1px solid #e8e8e8; border-radius: 14px; box-shadow: 0 6px 18px rgba(0,0,0,0.06); padding: 14px; }
+    .row { display:flex; gap:10px; flex-wrap: wrap; align-items:center; margin: 10px 0; }
+    label { font-size: 12px; color:#333; min-width: 92px; }
+    select, button, input { padding: 10px; border-radius: 12px; border:1px solid #ddd; background:#fff; font-size: 14px; }
+    input { min-width: 360px; flex: 1; }
+    button { cursor: pointer; }
+    button:disabled { opacity: .6; cursor: default; }
+    .status { margin-top: 10px; font-size: 12px; color:#333; white-space: pre-line; line-height:1.35; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace; font-size: 12px; color:#333; white-space: pre-wrap; }
+    .hint { margin-top: 10px; font-size: 12px; color:#555; line-height: 1.35; }
+    .pill { display:inline-block; padding: 2px 8px; border-radius:999px; border:1px solid #eee; background:#fafafa; font-size: 12px; }
+  </style>
+</head>
+
+<body>
+<div class="wrap">
+  <h1>NYC Borough – ACS 5-year export (tract aggregation, with populations + counts)</h1>
+
+  <div class="panel">
+    <div class="row">
+      <label for="year">ACS Year</label>
+      <select id="year">
+        <option value="2024" selected>2024 (ACS 5-year)</option>
+        <option value="2023">2023 (ACS 5-year)</option>
+        <option value="2022">2022 (ACS 5-year)</option>
+        <option value="2021">2021 (ACS 5-year)</option>
+      </select>
+
+      <label for="apikey">Census API key</label>
+      <input id="apikey" type="password" spellcheck="false" autocomplete="off" />
+
+      <button id="go">Generate CSV</button>
+      <button id="dl" disabled>Download CSV</button>
+    </div>
+
+    <div class="status" id="status">Ready.</div>
+    <div class="mono" id="debug"></div>
+
+    <div class="hint">
+      <span class="pill">Rollup rule</span> Borough metrics are computed by summing tract-level numerators/denominators inside each county, not averaging.
+      <br>
+      <span class="pill">Added</span> Denominator “universes” + numerator counts (poverty counts, estimated SNAP households, unemployed counts).
+      <br>
+      <span class="pill">NYC total</span> NYC totals are sums across the 5 borough counties (income median NYC left blank unless you want bins-aggregation added too).
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const DEFAULT_API_KEY = "0914bcd5f3cb9d1907bc961b8440ae4a7e8384d4";
+  document.getElementById("apikey").value = DEFAULT_API_KEY;
+
+  const NY_STATE_FIPS = "36";
+  const BOROUGHS = [
+    { borough: "Bronx", county: "005" },
+    { borough: "Brooklyn", county: "047" },
+    { borough: "Manhattan", county: "061" },
+    { borough: "Queens", county: "081" },
+    { borough: "Staten Island", county: "085" }
+  ];
+
+  const STATUS = (s) => (document.getElementById("status").textContent = s);
+  const DEBUG  = (s) => (document.getElementById("debug").textContent = s ?? "");
+
+  function getApiKey() { return String(document.getElementById("apikey").value || "").trim(); }
+
+  async function fetchJsonRobust(url, tries = 3) {
+    let lastErr = null;
+    for (let attempt = 1; attempt <= tries; attempt++) {
+      try {
+        const r = await fetch(url, { cache: "no-store" });
+        const txt = await r.text();
+        if (!r.ok) throw new Error(`HTTP ${r.status} for ${url}\n\n${txt}`);
+        if (!txt || txt.trim().length < 2) throw new Error(`Empty/truncated response for ${url}`);
+        return JSON.parse(txt);
+      } catch (e) {
+        lastErr = e;
+        const delay = attempt === 1 ? 250 : attempt === 2 ? 750 : 1500;
+        await new Promise(res => setTimeout(res, delay));
+      }
+    }
+    throw lastErr;
+  }
+
+  function cleanFips(x, len) {
+    const onlyDigits = String(x ?? "").match(/\d+/g)?.join("") ?? "";
+    return onlyDigits.padStart(len, "0").slice(-len);
+  }
+
+  function censusUrl({year, datasetPath, vars, countyFips}) {
+    const key = getApiKey();
+    if (!key) throw new Error("Missing Census API key");
+    const base = `https://api.census.gov/data/${encodeURIComponent(year)}/${datasetPath}`;
+    const get = ["NAME", ...vars].join(",");
+    const county = cleanFips(countyFips, 3);
+    return `${base}?get=${encodeURIComponent(get)}&for=tract:*&in=state:${NY_STATE_FIPS}%20county:${county}&key=${encodeURIComponent(key)}`;
+  }
+
+  function safeNum(x) { const n = Number(x); return Number.isFinite(n) ? n : 0; }
+
+  // Fetch county tracts for a given dataset/vars
+  async function fetchCountyTracts({year, datasetPath, vars, county}) {
+    const url = censusUrl({ year, datasetPath, vars, countyFips: county });
+    const data = await fetchJsonRobust(url, 3);
+    const h = data[0];
+
+    const idx = {};
+    for (const v of vars) idx[v] = h.indexOf(v);
+
+    const out = [];
+    for (const row of data.slice(1)) {
+      const vals = {};
+      for (const v of vars) vals[v] = row[idx[v]];
+      out.push(vals);
+    }
+    return out;
+  }
+
+  // ---------- POVERTY (same slice logic as CDTA): returns borough -> {n,d}
+  function povertyTableForPop(pop) {
+    if (pop === "black") return "B17001B";
+    if (pop === "asian") return "B17001D";
+    if (pop === "hisp")  return "B17001I";
+    return "B17001";
+  }
+  function povertyVarsForPop(pop) {
+    if (pop === "all" || pop === "black" || pop === "asian" || pop === "hisp") {
+      return { vars: ["B17001_001E", "B17001_002E"], numer: ["B17001_002E"], denom: ["B17001_001E"] };
+    }
+    if (pop === "women") {
+      return { vars: ["B17001_017E", "B17001_046E"], numer: ["B17001_017E"], denom: ["B17001_017E","B17001_046E"] };
+    }
+    if (pop === "children") {
+      const below = ["B17001_004E","B17001_005E","B17001_006E","B17001_007E","B17001_008E","B17001_009E",
+                     "B17001_018E","B17001_019E","B17001_020E","B17001_021E","B17001_022E","B17001_023E"];
+      const above = ["B17001_033E","B17001_034E","B17001_035E","B17001_036E","B17001_037E","B17001_038E",
+                     "B17001_047E","B17001_048E","B17001_049E","B17001_050E","B17001_051E","B17001_052E"];
+      return { vars: [...below, ...above], numer: below, denom: [...below, ...above] };
+    }
+    throw new Error("Unsupported poverty pop: " + pop);
+  }
+
+  async function boroughNdFromPoverty({year, pop}) {
+    const table = povertyTableForPop(pop);
+    const spec = povertyVarsForPop(pop);
+    const vars = spec.vars.map(v => v.replace(/^B17001_/, `${table}_`));
+    const numerVars = spec.numer.map(v => v.replace(/^B17001_/, `${table}_`));
+    const denomVars = spec.denom.map(v => v.replace(/^B17001_/, `${table}_`));
+
+    const out = new Map(); // borough -> {n,d}
+    for (const b of BOROUGHS) {
+      const rows = await fetchCountyTracts({year, datasetPath:"acs/acs5", vars, county: b.county});
+      let n = 0, d = 0;
+      for (const r of rows) {
+        for (const nv of numerVars) n += safeNum(r[nv]);
+        for (const dv of denomVars) d += safeNum(r[dv]);
+      }
+      out.set(b.borough, { n, d });
+    }
+    return out;
+  }
+
+  // ---------- SNAP: subject percent -> estimated SNAP households (numer) weighted by total households (denom)
+  async function boroughNdFromSnap({year}) {
+    const pctVar = "S2201_C04_001E";
+    const hhVar  = "B11001_001E";
+
+    const out = new Map(); // borough -> {n,d}
+    for (const b of BOROUGHS) {
+      const [pctRows, hhRows] = await Promise.all([
+        fetchCountyTracts({year, datasetPath:"acs/acs5/subject", vars:[pctVar], county: b.county}),
+        fetchCountyTracts({year, datasetPath:"acs/acs5", vars:[hhVar], county: b.county})
+      ]);
+
+      // Same county / tract ordering is not guaranteed across endpoints, so we can’t zip safely.
+      // For borough totals, we can just sum each endpoint separately at county level:
+      //   denom = sum households
+      //   numer = sum((pct/100)*households) BUT this needs tract alignment.
+      // To preserve weighting correctly, we *do* need alignment. So we fetch tract GEOIDs too.
+      // Instead of rewriting all fetch helpers, we’ll refetch with GEOIDs included below.
+
+      // Placeholder; overwritten below.
+      out.set(b.borough, { n: 0, d: 0, _needsGeoFix: true });
+    }
+
+    // Re-implement SNAP with GEOID alignment (tract -> county total)
+    async function fetchCountyTractsWithGeoid({year, datasetPath, vars, county}) {
+      const url = censusUrl({ year, datasetPath, vars, countyFips: county });
+      const data = await fetchJsonRobust(url, 3);
+      const h = data[0];
+
+      const iTr = h.indexOf("tract"), iCo = h.indexOf("county"), iSt = h.indexOf("state");
+      const idx = {};
+      for (const v of vars) idx[v] = h.indexOf(v);
+
+      const out = [];
+      for (const row of data.slice(1)) {
+        const geoid = `${row[iSt]}${row[iCo]}${row[iTr]}`;
+        const vals = {};
+        for (const v of vars) vals[v] = row[idx[v]];
+        out.push({ geoid, vals });
+      }
+      return out;
+    }
+
+    const fixed = new Map();
+    for (const b of BOROUGHS) {
+      const [pctRows2, hhRows2] = await Promise.all([
+        fetchCountyTractsWithGeoid({year, datasetPath:"acs/acs5/subject", vars:[pctVar], county: b.county}),
+        fetchCountyTractsWithGeoid({year, datasetPath:"acs/acs5", vars:[hhVar], county: b.county})
+      ]);
+
+      const hhByGeoid = new Map(hhRows2.map(r => [r.geoid, safeNum(r.vals[hhVar])]));
+      let n = 0, d = 0;
+      for (const r of pctRows2) {
+        const hh = hhByGeoid.get(r.geoid) || 0;
+        const pct = Number(r.vals[pctVar]);
+        if (!Number.isFinite(pct) || hh <= 0) continue;
+        n += (pct / 100) * hh;
+        d += hh;
+      }
+      fixed.set(b.borough, { n, d });
+    }
+    return fixed;
+  }
+
+  // ---------- UNEMP: unemployed / labor force
+  async function boroughNdFromUnemp({year}) {
+    const lfVar = "B23025_003E";
+    const unVar = "B23025_005E";
+    const vars = [lfVar, unVar];
+
+    const out = new Map();
+    for (const b of BOROUGHS) {
+      const rows = await fetchCountyTracts({year, datasetPath:"acs/acs5", vars, county: b.county});
+      let n = 0, d = 0;
+      for (const r of rows) {
+        n += safeNum(r[unVar]);
+        d += safeNum(r[lfVar]);
+      }
+      out.set(b.borough, { n, d });
+    }
+    return out;
+  }
+
+  // ---------- INCOME median (borough) from aggregated bins
+  const B19001_BINS = [
+    { key: "B19001_002E", lo: 0,     hi: 10000 },
+    { key: "B19001_003E", lo: 10000, hi: 15000 },
+    { key: "B19001_004E", lo: 15000, hi: 20000 },
+    { key: "B19001_005E", lo: 20000, hi: 25000 },
+    { key: "B19001_006E", lo: 25000, hi: 30000 },
+    { key: "B19001_007E", lo: 30000, hi: 35000 },
+    { key: "B19001_008E", lo: 35000, hi: 40000 },
+    { key: "B19001_009E", lo: 40000, hi: 45000 },
+    { key: "B19001_010E", lo: 45000, hi: 50000 },
+    { key: "B19001_011E", lo: 50000, hi: 60000 },
+    { key: "B19001_012E", lo: 60000, hi: 75000 },
+    { key: "B19001_013E", lo: 75000, hi: 100000 },
+    { key: "B19001_014E", lo: 100000,hi: 125000 },
+    { key: "B19001_015E", lo: 125000,hi: 150000 },
+    { key: "B19001_016E", lo: 150000,hi: 200000 },
+    { key: "B19001_017E", lo: 200000,hi: 250000 }
+  ];
+
+  function medianFromBins(binCounts) {
+    const total = binCounts.reduce((a,b) => a + b, 0);
+    if (total <= 0) return null;
+    const half = total / 2;
+    let cum = 0;
+    for (let i = 0; i < B19001_BINS.length; i++) {
+      const c = binCounts[i];
+      const bin = B19001_BINS[i];
+      if (c <= 0) { cum += c; continue; }
+      if (cum + c >= half) {
+        const into = half - cum;
+        const frac = into / c;
+        return bin.lo + frac * (bin.hi - bin.lo);
+      }
+      cum += c;
+    }
+    return B19001_BINS[B19001_BINS.length - 1].lo;
+  }
+
+  async function boroughIncomeMedian({year}) {
+    const vars = B19001_BINS.map(b => b.key);
+    const out = new Map();
+    for (const b of BOROUGHS) {
+      const rows = await fetchCountyTracts({year, datasetPath:"acs/acs5", vars, county: b.county});
+      const bins = Array(B19001_BINS.length).fill(0);
+      for (const r of rows) for (let i = 0; i < vars.length; i++) bins[i] += safeNum(r[vars[i]]);
+      out.set(b.borough, medianFromBins(bins));
+    }
+    return out;
+  }
+
+  // ---------- CSV helpers
+  function toFixedOrBlank(x, digits=2) { return Number.isFinite(x) ? x.toFixed(digits) : ""; }
+  function intOrBlank(x) { return Number.isFinite(x) ? Math.round(x).toString() : ""; }
+  function csvEscape(v) { const s = String(v ?? ""); return (/[",\n]/.test(s)) ? `"${s.replace(/"/g,'""')}"` : s; }
+  function makeCsv(rows, headers) {
+    const lines = [];
+    lines.push(headers.map(csvEscape).join(","));
+    for (const r of rows) lines.push(headers.map(h => csvEscape(r[h])).join(","));
+    return lines.join("\n");
+  }
+
+  // ---------- RUN
+  let lastCsvText = null;
+
+  async function run() {
+    const year = document.getElementById("year").value;
+    document.getElementById("go").disabled = true;
+    document.getElementById("dl").disabled = true;
+    lastCsvText = null;
+
+    try {
+      DEBUG("");
+      STATUS("Computing borough numerators/denominators from tract-level ACS…");
+
+      // Poverty ND maps (borough -> {n,d})
+      const povAll      = await boroughNdFromPoverty({year, pop:"all"});
+      const povWomen    = await boroughNdFromPoverty({year, pop:"women"});
+      const povChildren = await boroughNdFromPoverty({year, pop:"children"});
+      const povBlack    = await boroughNdFromPoverty({year, pop:"black"});
+      const povAsian    = await boroughNdFromPoverty({year, pop:"asian"});
+      const povHisp     = await boroughNdFromPoverty({year, pop:"hisp"});
+
+      // SNAP ND
+      const snapAll = await boroughNdFromSnap({year});
+
+      // Unemp ND
+      const unempAll = await boroughNdFromUnemp({year});
+
+      // Income median
+      const incomeMed = await boroughIncomeMedian({year});
+
+      // Build borough rows + NYC totals (sum numer/denom)
+      const rows = [];
+
+      const nyc = {
+        pop_total:0, pop_women:0, pop_children:0, pop_black:0, pop_asian:0, pop_hisp:0,
+        poor_total:0, poor_women:0, poor_children:0, poor_black:0, poor_asian:0, poor_hisp:0,
+        households_total:0, snap_households_est:0,
+        labor_force_total:0, unemployed_total:0
+      };
+
+      for (const b of BOROUGHS) {
+        const pa = povAll.get(b.borough)      || {n:0,d:0};
+        const pw = povWomen.get(b.borough)    || {n:0,d:0};
+        const pc = povChildren.get(b.borough) || {n:0,d:0};
+        const pb = povBlack.get(b.borough)    || {n:0,d:0};
+        const ps = povAsian.get(b.borough)    || {n:0,d:0};
+        const ph = povHisp.get(b.borough)     || {n:0,d:0};
+
+        const sa = snapAll.get(b.borough)     || {n:0,d:0};
+        const ua = unempAll.get(b.borough)    || {n:0,d:0};
+
+        // NYC totals
+        nyc.pop_total += pa.d;       nyc.poor_total += pa.n;
+        nyc.pop_women += pw.d;       nyc.poor_women += pw.n;
+        nyc.pop_children += pc.d;    nyc.poor_children += pc.n;
+        nyc.pop_black += pb.d;       nyc.poor_black += pb.n;
+        nyc.pop_asian += ps.d;       nyc.poor_asian += ps.n;
+        nyc.pop_hisp += ph.d;        nyc.poor_hisp += ph.n;
+
+        nyc.households_total += sa.d;
+        nyc.snap_households_est += sa.n;
+
+        nyc.labor_force_total += ua.d;
+        nyc.unemployed_total += ua.n;
+
+        const r = {
+          geography: b.borough,
+
+          // Denominators / universes
+          pop_total: intOrBlank(pa.d),
+          pop_women: intOrBlank(pw.d),
+          pop_children: intOrBlank(pc.d),
+          pop_black: intOrBlank(pb.d),
+          pop_asian: intOrBlank(ps.d),
+          pop_hisp: intOrBlank(ph.d),
+          households_total: intOrBlank(sa.d),
+          labor_force_total: intOrBlank(ua.d),
+
+          // Numerators / counts
+          poor_total: intOrBlank(pa.n),
+          poor_women: intOrBlank(pw.n),
+          poor_children: intOrBlank(pc.n),
+          poor_black: intOrBlank(pb.n),
+          poor_asian: intOrBlank(ps.n),
+          poor_hisp: intOrBlank(ph.n),
+          snap_households_est: intOrBlank(sa.n),
+          unemployed_total: intOrBlank(ua.n),
+
+          // Rates
+          poverty_all_pct: (pa.d>0) ? toFixedOrBlank(pa.n/pa.d*100,2) : "",
+          poverty_women_pct: (pw.d>0) ? toFixedOrBlank(pw.n/pw.d*100,2) : "",
+          poverty_children_pct: (pc.d>0) ? toFixedOrBlank(pc.n/pc.d*100,2) : "",
+          poverty_black_pct: (pb.d>0) ? toFixedOrBlank(pb.n/pb.d*100,2) : "",
+          poverty_asian_pct: (ps.d>0) ? toFixedOrBlank(ps.n/ps.d*100,2) : "",
+          poverty_hisp_pct: (ph.d>0) ? toFixedOrBlank(ph.n/ph.d*100,2) : "",
+
+          snap_all_pct: (sa.d>0) ? toFixedOrBlank(sa.n/sa.d*100,2) : "",
+          unemp_all_pct: (ua.d>0) ? toFixedOrBlank(ua.n/ua.d*100,2) : "",
+
+          // Income
+          income_median_hh_usd: Number.isFinite(incomeMed.get(b.borough)) ? Math.round(incomeMed.get(b.borough)).toString() : ""
+        };
+
+        rows.push(r);
+      }
+
+      // NYC total row (rates computed from summed numer/denom; median income NYC left blank unless you want county bins aggregated across all 5)
+      rows.unshift({
+        geography: "NYC (all boroughs)",
+
+        pop_total: intOrBlank(nyc.pop_total),
+        pop_women: intOrBlank(nyc.pop_women),
+        pop_children: intOrBlank(nyc.pop_children),
+        pop_black: intOrBlank(nyc.pop_black),
+        pop_asian: intOrBlank(nyc.pop_asian),
+        pop_hisp: intOrBlank(nyc.pop_hisp),
+
+        households_total: intOrBlank(nyc.households_total),
+        labor_force_total: intOrBlank(nyc.labor_force_total),
+
+        poor_total: intOrBlank(nyc.poor_total),
+        poor_women: intOrBlank(nyc.poor_women),
+        poor_children: intOrBlank(nyc.poor_children),
+        poor_black: intOrBlank(nyc.poor_black),
+        poor_asian: intOrBlank(nyc.poor_asian),
+        poor_hisp: intOrBlank(nyc.poor_hisp),
+
+        snap_households_est: intOrBlank(nyc.snap_households_est),
+        unemployed_total: intOrBlank(nyc.unemployed_total),
+
+        poverty_all_pct: (nyc.pop_total>0) ? toFixedOrBlank(nyc.poor_total/nyc.pop_total*100,2) : "",
+        poverty_women_pct: (nyc.pop_women>0) ? toFixedOrBlank(nyc.poor_women/nyc.pop_women*100,2) : "",
+        poverty_children_pct: (nyc.pop_children>0) ? toFixedOrBlank(nyc.poor_children/nyc.pop_children*100,2) : "",
+        poverty_black_pct: (nyc.pop_black>0) ? toFixedOrBlank(nyc.poor_black/nyc.pop_black*100,2) : "",
+        poverty_asian_pct: (nyc.pop_asian>0) ? toFixedOrBlank(nyc.poor_asian/nyc.pop_asian*100,2) : "",
+        poverty_hisp_pct: (nyc.pop_hisp>0) ? toFixedOrBlank(nyc.poor_hisp/nyc.pop_hisp*100,2) : "",
+
+        snap_all_pct: (nyc.households_total>0) ? toFixedOrBlank(nyc.snap_households_est/nyc.households_total*100,2) : "",
+        unemp_all_pct: (nyc.labor_force_total>0) ? toFixedOrBlank(nyc.unemployed_total/nyc.labor_force_total*100,2) : "",
+
+        income_median_hh_usd: ""
+      });
+
+      const headers = [
+        "geography",
+
+        // Denominators / universes
+        "pop_total","pop_women","pop_children","pop_black","pop_asian","pop_hisp",
+        "households_total",
+        "labor_force_total",
+
+        // Numerators / counts
+        "poor_total","poor_women","poor_children","poor_black","poor_asian","poor_hisp",
+        "snap_households_est",
+        "unemployed_total",
+
+        // Rates
+        "poverty_all_pct","poverty_women_pct","poverty_children_pct","poverty_black_pct","poverty_asian_pct","poverty_hisp_pct",
+        "snap_all_pct",
+        "unemp_all_pct",
+
+        // Income
+        "income_median_hh_usd"
+      ];
+
+      lastCsvText = makeCsv(rows, headers);
+
+      STATUS(`Done.\nYear: ${year} (ACS 5-year)\nRows: ${rows.length}\nColumns: ${headers.length}`);
+      DEBUG(`Columns:\n` + headers.map(h => `• ${h}`).join("\n"));
+      document.getElementById("dl").disabled = false;
+    } catch (e) {
+      console.error(e);
+      STATUS("Failed. Full error below:");
+      DEBUG(String(e?.message ?? e));
+    } finally {
+      document.getElementById("go").disabled = false;
+    }
+  }
+
+  function downloadCsv() {
+    if (!lastCsvText) return;
+    const year = document.getElementById("year").value;
+    const blob = new Blob([lastCsvText], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `nyc_borough_acs${year}_export_with_pops_and_counts.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  document.getElementById("go").addEventListener("click", run);
+  document.getElementById("dl").addEventListener("click", downloadCsv);
+})();
+</script>
+</body>
+</html>

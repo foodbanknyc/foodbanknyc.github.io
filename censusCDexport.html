@@ -1,0 +1,652 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>NYC CDTA – ACS 5-year CDTA Fact Table (with pops + numerators)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    html, body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; background:#fafafa; color:#111; }
+    .wrap { max-width: 1120px; margin: 22px auto; padding: 0 16px; }
+    h1 { font-size: 18px; margin: 0 0 12px; }
+    .panel {
+      background:#fff; border:1px solid #e8e8e8; border-radius: 14px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+      padding: 14px;
+    }
+    .row { display:flex; gap:10px; flex-wrap: wrap; align-items:center; margin: 10px 0; }
+    label { font-size: 12px; color:#333; min-width: 92px; }
+    select, button, input {
+      padding: 10px; border-radius: 12px; border:1px solid #ddd; background:#fff;
+      font-size: 14px;
+    }
+    input { min-width: 360px; flex: 1; }
+    button { cursor: pointer; }
+    button:disabled { opacity: .6; cursor: default; }
+    .status { margin-top: 10px; font-size: 12px; color:#333; white-space: pre-line; line-height:1.35; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace; font-size: 12px; color:#333; white-space: pre-wrap; }
+    .hint { margin-top: 10px; font-size: 12px; color:#555; line-height: 1.35; }
+    .pill { display:inline-block; padding: 2px 8px; border-radius:999px; border:1px solid #eee; background:#fafafa; font-size: 12px; }
+  </style>
+</head>
+
+<body>
+<div class="wrap">
+  <h1>NYC CDTA – ACS 5-year CDTA Fact Table (tract → CDTA aggregation)</h1>
+
+  <div class="panel">
+    <div class="row">
+      <label for="year">ACS Year</label>
+      <select id="year">
+        <option value="2024" selected>2024 (ACS 5-year)</option>
+        <option value="2023">2023 (ACS 5-year)</option>
+        <option value="2022">2022 (ACS 5-year)</option>
+        <option value="2021">2021 (ACS 5-year)</option>
+      </select>
+
+      <label for="apikey">Census API key</label>
+      <input id="apikey" type="password" spellcheck="false" autocomplete="off" />
+
+      <button id="go">Generate CSV</button>
+      <button id="dl" disabled>Download CSV</button>
+    </div>
+
+    <div class="status" id="status">Ready.</div>
+    <div class="mono" id="debug"></div>
+
+    <div class="hint">
+      <span class="pill">Added</span>
+      Includes (a) denominator “population” for each slice and (b) numerator counts (e.g., people in poverty).
+      <br><br>
+      <span class="pill">SNAP</span>
+      SNAP percent uses <b>S2201_C04_001E</b> (subject table) and converts to an estimated SNAP household count using total households <b>B11001_001E</b>.
+      <br><br>
+      <span class="pill">Debug</span>
+      If the API errors, you’ll see the full response body below.
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  // ----------------------------
+  // API key (client-side prototype)
+  // ----------------------------
+  const DEFAULT_API_KEY = "0914bcd5f3cb9d1907bc961b8440ae4a7e8384d4";
+  document.getElementById("apikey").value = DEFAULT_API_KEY;
+  function getApiKey() { return String(document.getElementById("apikey").value || "").trim(); }
+
+  // ----------------------------
+  // NYC / CDTA resources
+  // ----------------------------
+  const NY_STATE_FIPS = "36";
+  const NYC_COUNTY_FIPS = ["005","047","061","081","085"]; // Bronx, Kings, New York, Queens, Richmond
+
+  const TRACT_TO_CDTA_CSV_URL =
+    "https://data.cityofnewyork.us/resource/hm78-6dwm.csv?$limit=50000";
+
+  const CDTA_ARCGIS_GEOJSON_URL =
+    "https://services5.arcgis.com/GfwWNkhOj9bNBqoJ/arcgis/rest/services/NYC_Community_District_Tabulation_Areas_2020/FeatureServer/0/query" +
+    "?where=1%3D1&outFields=*&f=geojson&outSR=4326";
+
+  // ----------------------------
+  // UI
+  // ----------------------------
+  const STATUS = (s) => (document.getElementById("status").textContent = s);
+  const DEBUG  = (s) => (document.getElementById("debug").textContent = s ?? "");
+
+  // ----------------------------
+  // Robust fetch with FULL ERROR BODY
+  // ----------------------------
+  async function fetchText(url) {
+    const r = await fetch(url, { cache: "no-store" });
+    const txt = await r.text();
+    if (!r.ok) throw new Error(`HTTP ${r.status} for ${url}\n\n${txt}`);
+    return txt;
+  }
+
+  async function fetchJsonRobust(url, tries = 3) {
+    let lastErr = null;
+    for (let attempt = 1; attempt <= tries; attempt++) {
+      try {
+        const r = await fetch(url, { cache: "no-store" });
+        const txt = await r.text();
+        if (!r.ok) throw new Error(`HTTP ${r.status} for ${url}\n\n${txt}`);
+        if (!txt || txt.trim().length < 2) throw new Error(`Empty/truncated response for ${url}`);
+        return JSON.parse(txt);
+      } catch (e) {
+        lastErr = e;
+        console.warn(`fetchJsonRobust attempt ${attempt}/${tries} failed`, e);
+        const delay = attempt === 1 ? 250 : attempt === 2 ? 750 : 1500;
+        await new Promise(res => setTimeout(res, delay));
+      }
+    }
+    throw lastErr;
+  }
+
+  // ----------------------------
+  // CSV parsing
+  // ----------------------------
+  function parseCsvLine(line) {
+    const out = [];
+    let cur = "";
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (inQuotes && line[i + 1] === '"') { cur += '"'; i++; }
+        else inQuotes = !inQuotes;
+      } else if (ch === "," && !inQuotes) {
+        out.push(cur); cur = "";
+      } else cur += ch;
+    }
+    out.push(cur);
+    return out.map(s => s.trim());
+  }
+  function stripOuterQuotes(s) { return String(s ?? "").replace(/^"(.*)"$/, "$1").trim(); }
+  function csvToRows(csvText) {
+    const lines = csvText.trim().split(/\r?\n/);
+    if (lines.length < 2) return [];
+    const headers = parseCsvLine(lines[0]).map(h => stripOuterQuotes(h).toLowerCase());
+    const rows = [];
+    for (const line of lines.slice(1)) {
+      if (!line.trim()) continue;
+      const cols = parseCsvLine(line);
+      const obj = {};
+      headers.forEach((h, i) => obj[h] = stripOuterQuotes(cols[i] ?? ""));
+      rows.push(obj);
+    }
+    return rows;
+  }
+
+  // ----------------------------
+  // CDTA geo (for cdta_code, cdta_name)
+  // ----------------------------
+  function normalizeCdtaGeo(geo) {
+    for (const f of geo.features || []) {
+      const p = f.properties || {};
+      f.properties = p;
+      p.cdta_code = String(p.cdtacode || p.CDTACODE || p.CDTA2020 || p.cdta2020 || p.GEOID || p.geoid || "")
+        .trim().toUpperCase();
+      p.cdta_name = String(p.cdtaname || p.CDTANAME || p.NAME || p.name || "").trim();
+    }
+    return geo;
+  }
+  async function loadCdtaGeo() {
+    const geo = normalizeCdtaGeo(await fetchJsonRobust(CDTA_ARCGIS_GEOJSON_URL, 3));
+    geo.features = (geo.features || []).filter(f => (f.properties?.cdta_code || "").trim());
+    return geo;
+  }
+
+  function boroughFromCdtaCode(cdta) {
+    const c = String(cdta || "").toUpperCase();
+    if (c.startsWith("BX")) return "Bronx";
+    if (c.startsWith("BK")) return "Brooklyn";
+    if (c.startsWith("MN")) return "Manhattan";
+    if (c.startsWith("QN")) return "Queens";
+    if (c.startsWith("SI")) return "Staten Island";
+    return "";
+  }
+
+  // ----------------------------
+  // Census URL builder (+ key) — supports dataset paths like "acs/acs5" or "acs/acs5/subject"
+  // ----------------------------
+  function cleanFips(x, len) {
+    const onlyDigits = String(x ?? "").match(/\d+/g)?.join("") ?? "";
+    return onlyDigits.padStart(len, "0").slice(-len);
+  }
+
+  function censusUrl({year, datasetPath, vars, countyFips}) {
+    const key = getApiKey();
+    if (!key) throw new Error("Missing Census API key");
+    const base = `https://api.census.gov/data/${encodeURIComponent(year)}/${datasetPath}`;
+    const get = ["NAME", ...vars].join(",");
+    const county = cleanFips(countyFips, 3);
+    return `${base}?get=${encodeURIComponent(get)}&for=tract:*&in=state:${NY_STATE_FIPS}%20county:${county}&key=${encodeURIComponent(key)}`;
+  }
+
+  // ----------------------------
+  // Crosswalk: tract GEOID -> CDTA
+  // ----------------------------
+  let geoidToCdtaCache = null;
+  async function getGeoidToCdta() {
+    if (geoidToCdtaCache) return geoidToCdtaCache;
+
+    STATUS("Loading tract→CDTA crosswalk…");
+    const csv = await fetchText(TRACT_TO_CDTA_CSV_URL);
+    const rows = csvToRows(csv);
+    if (!rows.length) throw new Error("Crosswalk returned 0 rows");
+    if (!("geoid" in rows[0]) || !("cdtacode" in rows[0])) throw new Error("Crosswalk missing geoid/cdtacode");
+
+    const m = new Map();
+    for (const r of rows) {
+      const geoid = (r.geoid || "").trim();
+      const cdta = (r.cdtacode || "").trim().toUpperCase();
+      if (geoid && cdta) m.set(geoid, cdta);
+    }
+    geoidToCdtaCache = m;
+    return m;
+  }
+
+  // ----------------------------
+  // Aggregation helpers
+  // ----------------------------
+  function safeNum(x) { const n = Number(x); return Number.isFinite(n) ? n : 0; }
+
+  function aggregateNdToCdta({ tractNdMap, geoidToCdta }) {
+    // returns cdta -> { numerSum, denomSum }
+    const agg = new Map();
+    for (const [geoid, nd] of tractNdMap.entries()) {
+      const cdta = geoidToCdta.get(geoid);
+      if (!cdta) continue;
+      const cur = agg.get(cdta) || { numerSum: 0, denomSum: 0 };
+      cur.numerSum += safeNum(nd.numer);
+      cur.denomSum += safeNum(nd.denom);
+      agg.set(cdta, cur);
+    }
+    return agg;
+  }
+
+  function ndAggToPctMap(cdtaAgg) {
+    const out = new Map();
+    for (const [cdta, s] of cdtaAgg.entries()) {
+      out.set(cdta, (s.denomSum > 0) ? (s.numerSum / s.denomSum * 100.0) : null);
+    }
+    return out;
+  }
+
+  // ----------------------------
+  // Poverty (Detailed tables) – keep numerator/denominator per tract
+  // ----------------------------
+  function povertyTableForPop(pop) {
+    if (pop === "black") return "B17001B";
+    if (pop === "asian") return "B17001D";
+    if (pop === "hisp")  return "B17001I";
+    return "B17001";
+  }
+
+  function povertyVarsForPop(pop) {
+    if (pop === "all" || pop === "black" || pop === "asian" || pop === "hisp") {
+      return { vars: ["B17001_001E", "B17001_002E"], numer: ["B17001_002E"], denom: ["B17001_001E"] };
+    }
+    if (pop === "women") {
+      return { vars: ["B17001_017E", "B17001_046E"], numer: ["B17001_017E"], denom: ["B17001_017E","B17001_046E"] };
+    }
+    if (pop === "children") {
+      const below = ["B17001_004E","B17001_005E","B17001_006E","B17001_007E","B17001_008E","B17001_009E",
+                     "B17001_018E","B17001_019E","B17001_020E","B17001_021E","B17001_022E","B17001_023E"];
+      const above = ["B17001_033E","B17001_034E","B17001_035E","B17001_036E","B17001_037E","B17001_038E",
+                     "B17001_047E","B17001_048E","B17001_049E","B17001_050E","B17001_051E","B17001_052E"];
+      return { vars: [...below, ...above], numer: below, denom: [...below, ...above] };
+    }
+    throw new Error("Unsupported poverty pop: " + pop);
+  }
+
+  async function fetchPovertyTracts({year, pop}) {
+    const out = new Map(); // GEOID -> {numer, denom}
+    const table = povertyTableForPop(pop);
+    const spec = povertyVarsForPop(pop);
+
+    const vars = spec.vars.map(v => v.replace(/^B17001_/, `${table}_`));
+    const numerVars = spec.numer.map(v => v.replace(/^B17001_/, `${table}_`));
+    const denomVars = spec.denom.map(v => v.replace(/^B17001_/, `${table}_`));
+
+    for (const county of NYC_COUNTY_FIPS) {
+      const url = censusUrl({year, datasetPath: "acs/acs5", vars, countyFips: county});
+      const data = await fetchJsonRobust(url, 3);
+      const h = data[0];
+
+      const idx = {};
+      for (const v of vars) idx[v] = h.indexOf(v);
+      const iTr = h.indexOf("tract"), iCo = h.indexOf("county"), iSt = h.indexOf("state");
+
+      for (const row of data.slice(1)) {
+        const geoid = `${row[iSt]}${row[iCo]}${row[iTr]}`;
+        let numer = 0, denom = 0;
+        for (const nv of numerVars) numer += safeNum(row[idx[nv]]);
+        for (const dv of denomVars) denom += safeNum(row[idx[dv]]);
+        out.set(geoid, { numer, denom });
+      }
+    }
+    return out;
+  }
+
+  // ----------------------------
+  // Unemployment (Detailed tables)
+  // ----------------------------
+  async function fetchUnempTracts({year}) {
+    const vars = ["B23025_003E","B23025_005E"]; // labor force, unemployed
+    const out = new Map();
+    for (const county of NYC_COUNTY_FIPS) {
+      const url = censusUrl({year, datasetPath:"acs/acs5", vars, countyFips: county});
+      const data = await fetchJsonRobust(url, 3);
+
+      const h = data[0];
+      const iLF = h.indexOf("B23025_003E");
+      const iUn = h.indexOf("B23025_005E");
+      const iTr = h.indexOf("tract"), iCo = h.indexOf("county"), iSt = h.indexOf("state");
+
+      for (const row of data.slice(1)) {
+        const geoid = `${row[iSt]}${row[iCo]}${row[iTr]}`;
+        out.set(geoid, { numer: safeNum(row[iUn]), denom: safeNum(row[iLF]) });
+      }
+    }
+    return out;
+  }
+
+  // ----------------------------
+  // Income median (Detailed tables via B19001 bins)
+  // ----------------------------
+  const B19001_BINS = [
+    { key: "B19001_002E", lo: 0,     hi: 10000 },
+    { key: "B19001_003E", lo: 10000, hi: 15000 },
+    { key: "B19001_004E", lo: 15000, hi: 20000 },
+    { key: "B19001_005E", lo: 20000, hi: 25000 },
+    { key: "B19001_006E", lo: 25000, hi: 30000 },
+    { key: "B19001_007E", lo: 30000, hi: 35000 },
+    { key: "B19001_008E", lo: 35000, hi: 40000 },
+    { key: "B19001_009E", lo: 40000, hi: 45000 },
+    { key: "B19001_010E", lo: 45000, hi: 50000 },
+    { key: "B19001_011E", lo: 50000, hi: 60000 },
+    { key: "B19001_012E", lo: 60000, hi: 75000 },
+    { key: "B19001_013E", lo: 75000, hi: 100000 },
+    { key: "B19001_014E", lo: 100000,hi: 125000 },
+    { key: "B19001_015E", lo: 125000,hi: 150000 },
+    { key: "B19001_016E", lo: 150000,hi: 200000 },
+    { key: "B19001_017E", lo: 200000,hi: 250000 }
+  ];
+
+  function medianFromBins(binCounts) {
+    const total = binCounts.reduce((a,b) => a + b, 0);
+    if (total <= 0) return null;
+    const half = total / 2;
+    let cum = 0;
+    for (let i = 0; i < B19001_BINS.length; i++) {
+      const c = binCounts[i];
+      const bin = B19001_BINS[i];
+      if (c <= 0) { cum += c; continue; }
+      if (cum + c >= half) {
+        const into = half - cum;
+        const frac = into / c;
+        return bin.lo + frac * (bin.hi - bin.lo);
+      }
+      cum += c;
+    }
+    return B19001_BINS[B19001_BINS.length - 1].lo;
+  }
+
+  async function fetchIncomeBinsTracts({year}) {
+    const vars = B19001_BINS.map(b => b.key);
+    const out = new Map(); // GEOID -> [bins...]
+    for (const county of NYC_COUNTY_FIPS) {
+      const url = censusUrl({year, datasetPath:"acs/acs5", vars, countyFips: county});
+      const data = await fetchJsonRobust(url, 3);
+
+      const h = data[0];
+      const idx = vars.map(v => h.indexOf(v));
+      const iTr = h.indexOf("tract"), iCo = h.indexOf("county"), iSt = h.indexOf("state");
+
+      for (const row of data.slice(1)) {
+        const geoid = `${row[iSt]}${row[iCo]}${row[iTr]}`;
+        const bins = idx.map(i => safeNum(row[i]));
+        out.set(geoid, bins);
+      }
+    }
+    return out;
+  }
+
+  function aggregateIncomeMedianToCdta({ tractBinsMap, geoidToCdta }) {
+    const cdtaBins = new Map(); // cdta -> [sumBins...]
+    for (const [geoid, bins] of tractBinsMap.entries()) {
+      const cdta = geoidToCdta.get(geoid);
+      if (!cdta) continue;
+      const cur = cdtaBins.get(cdta) || Array(B19001_BINS.length).fill(0);
+      for (let i = 0; i < B19001_BINS.length; i++) cur[i] += safeNum(bins[i]);
+      cdtaBins.set(cdta, cur);
+    }
+    const out = new Map();
+    for (const [cdta, bins] of cdtaBins.entries()) out.set(cdta, medianFromBins(bins));
+    return out;
+  }
+
+  // ----------------------------
+  // SNAP (Subject table percent + Detailed households denom)
+  // ----------------------------
+  async function fetchHouseholdsTracts({year}) {
+    const vars = ["B11001_001E"];
+    const out = new Map(); // GEOID -> households
+    for (const county of NYC_COUNTY_FIPS) {
+      const url = censusUrl({year, datasetPath:"acs/acs5", vars, countyFips: county});
+      const data = await fetchJsonRobust(url, 3);
+
+      const h = data[0];
+      const iHH = h.indexOf("B11001_001E");
+      const iTr = h.indexOf("tract"), iCo = h.indexOf("county"), iSt = h.indexOf("state");
+
+      for (const row of data.slice(1)) {
+        const geoid = `${row[iSt]}${row[iCo]}${row[iTr]}`;
+        out.set(geoid, safeNum(row[iHH]));
+      }
+    }
+    return out;
+  }
+
+  async function fetchSnapPctTracts({year}) {
+    const vars = ["S2201_C04_001E"]; // SNAP % households receiving
+    const out = new Map(); // GEOID -> percent
+    for (const county of NYC_COUNTY_FIPS) {
+      const url = censusUrl({year, datasetPath:"acs/acs5/subject", vars, countyFips: county});
+      const data = await fetchJsonRobust(url, 3);
+
+      const h = data[0];
+      const iPct = h.indexOf("S2201_C04_001E");
+      const iTr = h.indexOf("tract"), iCo = h.indexOf("county"), iSt = h.indexOf("state");
+
+      for (const row of data.slice(1)) {
+        const geoid = `${row[iSt]}${row[iCo]}${row[iTr]}`;
+        const pct = Number(row[iPct]);
+        out.set(geoid, Number.isFinite(pct) ? pct : null);
+      }
+    }
+    return out;
+  }
+
+  async function fetchSnapTractsWeighted({year}) {
+    const [hh, pct] = await Promise.all([ fetchHouseholdsTracts({year}), fetchSnapPctTracts({year}) ]);
+
+    const out = new Map(); // GEOID -> {numer, denom}
+    for (const [geoid, households] of hh.entries()) {
+      const p = pct.get(geoid);
+      if (!Number.isFinite(households) || households <= 0 || !Number.isFinite(p)) {
+        out.set(geoid, { numer: 0, denom: 0 });
+        continue;
+      }
+      const numer = (p / 100.0) * households; // estimated SNAP households
+      out.set(geoid, { numer, denom: households });
+    }
+    return out;
+  }
+
+  // ----------------------------
+  // CSV helpers
+  // ----------------------------
+  function toFixedOrBlank(x, digits=2) { return Number.isFinite(x) ? x.toFixed(digits) : ""; }
+  function intOrBlank(x) { return Number.isFinite(x) ? Math.round(x).toString() : ""; }
+  function csvEscape(v) {
+    const s = String(v ?? "");
+    if (/[",\n]/.test(s)) return `"${s.replace(/"/g,'""')}"`;
+    return s;
+  }
+  function makeCsv(rows, headers) {
+    const lines = [];
+    lines.push(headers.map(csvEscape).join(","));
+    for (const r of rows) lines.push(headers.map(h => csvEscape(r[h])).join(","));
+    return lines.join("\n");
+  }
+
+  // ----------------------------
+  // Run pipeline -> build CDTA table
+  // ----------------------------
+  let lastCsvText = null;
+
+  async function run() {
+    const year = document.getElementById("year").value;
+    document.getElementById("go").disabled = true;
+    document.getElementById("dl").disabled = true;
+    lastCsvText = null;
+
+    try {
+      DEBUG("");
+      STATUS("Loading CDTA list + tract→CDTA crosswalk…");
+
+      const [cdtaGeo, geoidToCdta] = await Promise.all([ loadCdtaGeo(), getGeoidToCdta() ]);
+
+      const cdtaRows = new Map(); // cdta_code -> row
+      for (const f of cdtaGeo.features || []) {
+        const cdta = (f.properties?.cdta_code || "").trim().toUpperCase();
+        if (!cdta) continue;
+        cdtaRows.set(cdta, {
+          cdta_code: cdta,
+          cdta_name: (f.properties?.cdta_name || "").trim(),
+          borough: boroughFromCdtaCode(cdta)
+        });
+      }
+
+      STATUS("Fetching tract-level ACS + aggregating to CDTA…");
+
+      // Poverty slices: tract ND -> cdta ND sums + pct
+      const cdtaPovAllAgg      = aggregateNdToCdta({ tractNdMap: await fetchPovertyTracts({year, pop:"all"}),      geoidToCdta });
+      const cdtaPovWomenAgg    = aggregateNdToCdta({ tractNdMap: await fetchPovertyTracts({year, pop:"women"}),    geoidToCdta });
+      const cdtaPovChildrenAgg = aggregateNdToCdta({ tractNdMap: await fetchPovertyTracts({year, pop:"children"}), geoidToCdta });
+      const cdtaPovBlackAgg    = aggregateNdToCdta({ tractNdMap: await fetchPovertyTracts({year, pop:"black"}),    geoidToCdta });
+      const cdtaPovAsianAgg    = aggregateNdToCdta({ tractNdMap: await fetchPovertyTracts({year, pop:"asian"}),    geoidToCdta });
+      const cdtaPovHispAgg     = aggregateNdToCdta({ tractNdMap: await fetchPovertyTracts({year, pop:"hisp"}),     geoidToCdta });
+
+      const povAllPct      = ndAggToPctMap(cdtaPovAllAgg);
+      const povWomenPct    = ndAggToPctMap(cdtaPovWomenAgg);
+      const povChildrenPct = ndAggToPctMap(cdtaPovChildrenAgg);
+      const povBlackPct    = ndAggToPctMap(cdtaPovBlackAgg);
+      const povAsianPct    = ndAggToPctMap(cdtaPovAsianAgg);
+      const povHispPct     = ndAggToPctMap(cdtaPovHispAgg);
+
+      // SNAP: tract ND -> cdta sums + pct
+      const cdtaSnapAgg = aggregateNdToCdta({ tractNdMap: await fetchSnapTractsWeighted({year}), geoidToCdta });
+      const snapPct = ndAggToPctMap(cdtaSnapAgg);
+
+      // Unemployment: tract ND -> cdta sums + pct
+      const cdtaUnempAgg = aggregateNdToCdta({ tractNdMap: await fetchUnempTracts({year}), geoidToCdta });
+      const unempPct = ndAggToPctMap(cdtaUnempAgg);
+
+      // Income median
+      const incomeMedian = aggregateIncomeMedianToCdta({ tractBinsMap: await fetchIncomeBinsTracts({year}), geoidToCdta });
+
+      // Fill rows
+      for (const [cdta, row] of cdtaRows.entries()) {
+        // ---- POVERTY: denom “pop” + numer “in poverty”
+        const a = cdtaPovAllAgg.get(cdta)      || { numerSum: NaN, denomSum: NaN };
+        const w = cdtaPovWomenAgg.get(cdta)    || { numerSum: NaN, denomSum: NaN };
+        const c = cdtaPovChildrenAgg.get(cdta) || { numerSum: NaN, denomSum: NaN };
+        const b = cdtaPovBlackAgg.get(cdta)    || { numerSum: NaN, denomSum: NaN };
+        const s = cdtaPovAsianAgg.get(cdta)    || { numerSum: NaN, denomSum: NaN };
+        const h = cdtaPovHispAgg.get(cdta)     || { numerSum: NaN, denomSum: NaN };
+
+        row.pop_total         = intOrBlank(a.denomSum);
+        row.pop_women         = intOrBlank(w.denomSum);
+        row.pop_children      = intOrBlank(c.denomSum);
+        row.pop_black         = intOrBlank(b.denomSum);
+        row.pop_asian         = intOrBlank(s.denomSum);
+        row.pop_hisp          = intOrBlank(h.denomSum);
+
+        row.poor_total        = intOrBlank(a.numerSum);
+        row.poor_women        = intOrBlank(w.numerSum);
+        row.poor_children     = intOrBlank(c.numerSum);
+        row.poor_black        = intOrBlank(b.numerSum);
+        row.poor_asian        = intOrBlank(s.numerSum);
+        row.poor_hisp         = intOrBlank(h.numerSum);
+
+        row.poverty_all_pct       = toFixedOrBlank(povAllPct.get(cdta), 2);
+        row.poverty_women_pct     = toFixedOrBlank(povWomenPct.get(cdta), 2);
+        row.poverty_children_pct  = toFixedOrBlank(povChildrenPct.get(cdta), 2);
+        row.poverty_black_pct     = toFixedOrBlank(povBlackPct.get(cdta), 2);
+        row.poverty_asian_pct     = toFixedOrBlank(povAsianPct.get(cdta), 2);
+        row.poverty_hisp_pct      = toFixedOrBlank(povHispPct.get(cdta), 2);
+
+        // ---- SNAP: households denom + est SNAP hh numer
+        const sn = cdtaSnapAgg.get(cdta) || { numerSum: NaN, denomSum: NaN };
+        row.households_total     = intOrBlank(sn.denomSum);
+        row.snap_households_est  = intOrBlank(sn.numerSum);
+        row.snap_all_pct         = toFixedOrBlank(snapPct.get(cdta), 2);
+
+        // ---- UNEMP: labor force denom + unemployed numer
+        const un = cdtaUnempAgg.get(cdta) || { numerSum: NaN, denomSum: NaN };
+        row.labor_force_total    = intOrBlank(un.denomSum);
+        row.unemployed_total     = intOrBlank(un.numerSum);
+        row.unemp_all_pct        = toFixedOrBlank(unempPct.get(cdta), 2);
+
+        // ---- INCOME
+        const med = incomeMedian.get(cdta);
+        row.income_median_hh_usd = Number.isFinite(med) ? Math.round(med).toString() : "";
+      }
+
+      const headers = [
+        "cdta_code","cdta_name","borough",
+
+        // Denominators / universes
+        "pop_total","pop_women","pop_children","pop_black","pop_asian","pop_hisp",
+        "households_total",
+        "labor_force_total",
+
+        // Numerators / counts
+        "poor_total","poor_women","poor_children","poor_black","poor_asian","poor_hisp",
+        "snap_households_est",
+        "unemployed_total",
+
+        // Rates
+        "poverty_all_pct","poverty_women_pct","poverty_children_pct","poverty_black_pct","poverty_asian_pct","poverty_hisp_pct",
+        "snap_all_pct",
+        "unemp_all_pct",
+
+        // Income
+        "income_median_hh_usd"
+      ];
+
+      const rows = [...cdtaRows.values()].sort((a,b) => a.cdta_code.localeCompare(b.cdta_code));
+      lastCsvText = makeCsv(rows, headers);
+
+      STATUS(
+        `Done.\n` +
+        `Year: ${year} (ACS 5-year)\n` +
+        `Rows (CDTAs): ${rows.length}\n` +
+        `Columns: ${headers.length}`
+      );
+      DEBUG(`Columns:\n` + headers.map(h => `• ${h}`).join("\n"));
+
+      document.getElementById("dl").disabled = false;
+    } catch (e) {
+      console.error(e);
+      STATUS("Failed. Full error below:");
+      DEBUG(String(e?.message ?? e));
+    } finally {
+      document.getElementById("go").disabled = false;
+    }
+  }
+
+  function downloadCsv() {
+    if (!lastCsvText) return;
+    const year = document.getElementById("year").value;
+    const blob = new Blob([lastCsvText], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `nyc_cdta_acs${year}_fact_table_with_pops_and_counts.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  document.getElementById("go").addEventListener("click", run);
+  document.getElementById("dl").addEventListener("click", downloadCsv);
+})();
+</script>
+</body>
+</html>
